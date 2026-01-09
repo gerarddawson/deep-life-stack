@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Link, useNavigate } from 'react-router-dom'
+import ActivityGrid from './ActivityGrid'
 
 // Updated layer durations: Discipline=15, Values=30, Control=30, Vision=45 (total=120)
 const LAYER_DURATIONS = {
@@ -286,19 +287,16 @@ export default function Dashboard() {
 
       {/* Journey Progress */}
       <div className="card p-8 mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-display font-bold text-ink">Your 4-Month Journey</h2>
           <span className="px-4 py-2 rounded-md bg-cream-200 text-ink font-medium">
             Day {journeyDay} of 120
           </span>
         </div>
 
-        {/* Progress Bar (based on actions, not just days) */}
-        <div className="h-3 bg-cream-200 rounded-full overflow-hidden mb-6">
-          <div
-            className="h-full bg-gradient-to-r from-discipline-primary via-values-primary via-control-primary to-vision-primary transition-all duration-500"
-            style={{ width: `${Math.min(overallProgress, 100)}%` }}
-          />
+        {/* Activity Grid */}
+        <div className="mb-8">
+          <ActivityGrid journeyStartDate={journeyStartDate} />
         </div>
 
         {/* Layer Indicators */}

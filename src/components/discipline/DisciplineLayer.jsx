@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import HabitCard from './HabitCard'
 import AddHabitModal from './AddHabitModal'
+import HabitCalendar from './HabitCalendar'
 
 export default function DisciplineLayer() {
   const [habits, setHabits] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingHabit, setEditingHabit] = useState(null)
-  const [completionHistory, setCompletionHistory] = useState([])
+  const [firstHabitDate, setFirstHabitDate] = useState(null)
 
   useEffect(() => {
     loadHabits()
@@ -27,60 +28,16 @@ export default function DisciplineLayer() {
       if (error) throw error
       setHabits(data || [])
 
-      // Load completion history (last 14 days)
-      await loadCompletionHistory(user.id, data || [])
+      // Get the earliest habit creation date
+      if (data && data.length > 0) {
+        const dates = data.map(h => new Date(h.created_at))
+        const earliest = new Date(Math.min(...dates))
+        setFirstHabitDate(earliest.toISOString().split('T')[0])
+      }
     } catch (error) {
       console.error('Error loading habits:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const loadCompletionHistory = async (userId, habits) => {
-    if (habits.length === 0) return
-
-    try {
-      // Get last 14 days of completions
-      const fourteenDaysAgo = new Date()
-      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
-      const startDate = fourteenDaysAgo.toISOString().split('T')[0]
-      const today = new Date().toISOString().split('T')[0]
-
-      // Group completions by date
-      const history = []
-      const currentDate = new Date()
-
-      for (let i = 1; i <= 14; i++) {
-        const date = new Date(currentDate)
-        date.setDate(date.getDate() - i)
-        const dateStr = date.toISOString().split('T')[0]
-
-        // Count completions for this date
-        const dayCompletions = habits.map(habit => {
-          const completion = habit.completions?.find(c => c.date === dateStr && c.completed)
-          return {
-            habitId: habit.id,
-            habitName: habit.name,
-            habitIcon: habit.icon,
-            habitColor: habit.color,
-            completed: !!completion
-          }
-        })
-
-        const completedCount = dayCompletions.filter(c => c.completed).length
-
-        history.push({
-          date: dateStr,
-          dateObj: date,
-          completions: dayCompletions,
-          completedCount,
-          totalHabits: habits.length
-        })
-      }
-
-      setCompletionHistory(history)
-    } catch (error) {
-      console.error('Error loading completion history:', error)
     }
   }
 
@@ -298,60 +255,9 @@ export default function DisciplineLayer() {
             </div>
           </div>
 
-          {/* Completion History */}
-          {completionHistory.length > 0 && (
-            <div className="card p-6">
-              <h2 className="text-2xl font-display font-bold text-ink mb-4">Last 14 Days</h2>
-              <div className="space-y-3">
-                {completionHistory.map((day) => {
-                  const percentage = (day.completedCount / day.totalHabits) * 100
-                  const dateFormatted = day.dateObj.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric'
-                  })
-
-                  return (
-                    <div key={day.date} className="p-4 bg-cream-100 rounded-md">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-ink">{dateFormatted}</span>
-                        <span className="text-sm text-ink-light">
-                          {day.completedCount}/{day.totalHabits} completed
-                        </span>
-                      </div>
-
-                      {/* Progress bar */}
-                      <div className="h-2 bg-cream-200 rounded-full overflow-hidden mb-3">
-                        <div
-                          className="h-full gradient-discipline transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-
-                      {/* Individual habit indicators */}
-                      <div className="flex gap-2">
-                        {day.completions.map((completion) => (
-                          <div
-                            key={completion.habitId}
-                            className="flex-1 h-8 rounded flex items-center justify-center text-xs font-medium"
-                            style={{
-                              backgroundColor: completion.completed
-                                ? `${completion.habitColor}30`
-                                : '#EDE7DD',
-                              color: completion.completed ? completion.habitColor : '#9CA3AF',
-                              opacity: completion.completed ? 1 : 0.5
-                            }}
-                            title={`${completion.habitName} - ${completion.completed ? 'Completed' : 'Not completed'}`}
-                          >
-                            {completion.completed && '✓'}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+          {/* Habit Calendar */}
+          {habits.length > 0 && (
+            <HabitCalendar habits={habits} firstHabitDate={firstHabitDate} />
           )}
         </>
       )}
