@@ -279,9 +279,8 @@ export default function Dashboard() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      {/* Welcome Header */}
+      {/* Date Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-display font-bold text-ink mb-2">Dashboard</h1>
         <p className="text-lg text-ink-light">{formattedDate}</p>
       </div>
 
@@ -289,9 +288,8 @@ export default function Dashboard() {
       <div className="card p-8 mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-display font-bold text-ink mb-1">Your 4-Month Journey</h2>
             <p className="text-sm text-ink-light">
-              Currently in <span className="font-medium text-ink">{currentLayer.charAt(0).toUpperCase() + currentLayer.slice(1)}</span> layer · Day {dayInCurrentLayer} of {LAYER_DURATIONS[currentLayer]}
+              Currently in <span className="font-medium text-ink">{currentLayer.charAt(0).toUpperCase() + currentLayer.slice(1)}</span> layer
             </p>
           </div>
           <span className="px-4 py-2 rounded-md bg-cream-200 text-ink font-medium">
@@ -300,45 +298,7 @@ export default function Dashboard() {
         </div>
 
         {/* Activity Grid */}
-        <div className="mb-8">
-          <ActivityGrid journeyStartDate={journeyStartDate} />
-        </div>
-
-        {/* Layer Indicators */}
-        <div className="grid grid-cols-4 gap-4">
-          <LayerIndicator
-            name="Discipline"
-            day={Math.min(journeyDay, LAYER_DURATIONS.discipline)}
-            total={LAYER_DURATIONS.discipline}
-            color="discipline"
-            progress={layerProgress.discipline}
-            onClick={() => navigate('/discipline')}
-          />
-          <LayerIndicator
-            name="Values"
-            day={Math.max(0, Math.min(journeyDay - LAYER_DURATIONS.discipline, LAYER_DURATIONS.values))}
-            total={LAYER_DURATIONS.values}
-            color="values"
-            progress={layerProgress.values}
-            onClick={() => navigate('/values')}
-          />
-          <LayerIndicator
-            name="Control"
-            day={Math.max(0, Math.min(journeyDay - LAYER_DURATIONS.discipline - LAYER_DURATIONS.values, LAYER_DURATIONS.control))}
-            total={LAYER_DURATIONS.control}
-            color="control"
-            progress={layerProgress.control}
-            onClick={() => navigate('/control')}
-          />
-          <LayerIndicator
-            name="Vision"
-            day={Math.max(0, Math.min(journeyDay - LAYER_DURATIONS.discipline - LAYER_DURATIONS.values - LAYER_DURATIONS.control, LAYER_DURATIONS.vision))}
-            total={LAYER_DURATIONS.vision}
-            color="vision"
-            progress={layerProgress.vision}
-            onClick={() => navigate('/vision')}
-          />
-        </div>
+        <ActivityGrid journeyStartDate={journeyStartDate} />
       </div>
 
       {/* Today's Focus */}
@@ -378,34 +338,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-    </div>
-  )
-}
-
-function LayerIndicator({ name, day, total, color, progress, onClick }) {
-  // Show progress based on actions taken, not just days
-  const actionProgress = progress ? Math.min((progress.items / progress.max) * 100, 100) : 0
-  const displayProgress = Math.max(actionProgress, (day / total) * 100)
-
-  return (
-    <div className="text-center cursor-pointer group" onClick={onClick}>
-      <div className="w-16 h-16 mx-auto mb-3 rounded-full border-4 border-cream-200 flex items-center justify-center relative transition-all group-hover:border-cream-400 group-hover:scale-110">
-        {displayProgress > 0 && (
-          <div
-            className="absolute inset-0 rounded-full"
-            style={{
-              background: `conic-gradient(var(--${color}-primary) ${displayProgress}%, transparent ${displayProgress}%)`,
-            }}
-          />
-        )}
-      </div>
-      <div className="font-medium text-ink group-hover:underline">{name}</div>
-      <div className="text-sm text-ink-light">{day}/{total} days</div>
-      {progress && progress.items > 0 && (
-        <div className="text-xs text-ink-light/70 mt-1">
-          {progress.items} actions
-        </div>
-      )}
     </div>
   )
 }
