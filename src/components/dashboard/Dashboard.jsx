@@ -14,6 +14,9 @@ const LAYER_DURATIONS = {
 export default function Dashboard() {
   const navigate = useNavigate()
   const [habits, setHabits] = useState([])
+  const [rituals, setRituals] = useState([])
+  const [dailyPlan, setDailyPlan] = useState(null)
+  const [weeklyPlan, setWeeklyPlan] = useState(null)
   const [journey, setJourney] = useState(null)
   const [loading, setLoading] = useState(true)
   const [journeyStartDate, setJourneyStartDate] = useState(null)
@@ -57,11 +60,51 @@ export default function Dashboard() {
         .order('order', { ascending: true })
 
       setHabits(habitsData || [])
+
+      // Load daily and weekly rituals with completions
+      const { data: ritualsData } = await supabase
+        .from('rituals')
+        .select('*, ritual_completions(*)')
+        .eq('user_id', user.id)
+        .in('frequency', ['daily', 'weekly'])
+        .order('created_at', { ascending: true })
+
+      setRituals(ritualsData || [])
+
+      // Load today's daily plan
+      const today = new Date().toISOString().split('T')[0]
+      const { data: dailyPlanData } = await supabase
+        .from('daily_plans')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .maybeSingle()
+
+      setDailyPlan(dailyPlanData)
+
+      // Load this week's weekly plan
+      const weekStart = getWeekStart(new Date())
+      const { data: weeklyPlanData } = await supabase
+        .from('weekly_plans')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('week_start', weekStart)
+        .maybeSingle()
+
+      setWeeklyPlan(weeklyPlanData)
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const getWeekStart = (date) => {
+    const d = new Date(date)
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Adjust to Monday
+    const monday = new Date(d.setDate(diff))
+    return monday.toISOString().split('T')[0]
   }
 
   const calculateJourneyStartDate = async (userId) => {
@@ -237,6 +280,117 @@ export default function Dashboard() {
     )
   }
 
+  const handleToggleHabit = async (habitId) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const today = new Date().toISOString().split('T')[0]
+
+      const { data: existing } = await supabase
+        .from('completions')
+        .select('*')
+        .eq('habit_id', habitId)
+        .eq('date', today)
+        .single()
+
+      if (existing) {
+        await supabase
+          .from('completions')
+          .update({ completed: !existing.completed })
+          .eq('id', existing.id)
+      } else {
+        await supabase
+          .from('completions')
+          .insert({
+            habit_id: habitId,
+            user_id: user.id,
+            date: today,
+            completed: true,
+          })
+      }
+
+      await loadData()
+    } catch (error) {
+      console.error('Error toggling habit:', error)
+    }
+  }
+
+  const isRitualCompleted = (ritual) => {
+    const today = new Date().toISOString().split('T')[0]
+    if (ritual.frequency === 'daily') {
+      return ritual.ritual_completions?.some(c =>
+        c.date === today && c.completed
+      )
+    } else if (ritual.frequency === 'weekly') {
+      const weekStart = getWeekStart(new Date())
+      return ritual.ritual_completions?.some(c => {
+        const completionWeekStart = getWeekStart(new Date(c.date))
+        return completionWeekStart === weekStart && c.completed
+      })
+    }
+    return false
+  }
+
+  const handleToggleRitual = async (ritualId) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const today = new Date().toISOString().split('T')[0]
+      const ritual = rituals.find(r => r.id === ritualId)
+
+      if (ritual.frequency === 'daily') {
+        const { data: existing } = await supabase
+          .from('ritual_completions')
+          .select('*')
+          .eq('ritual_id', ritualId)
+          .eq('date', today)
+          .single()
+
+        if (existing) {
+          await supabase
+            .from('ritual_completions')
+            .update({ completed: !existing.completed })
+            .eq('id', existing.id)
+        } else {
+          await supabase
+            .from('ritual_completions')
+            .insert({
+              ritual_id: ritualId,
+              user_id: user.id,
+              date: today,
+              completed: true,
+            })
+        }
+      } else if (ritual.frequency === 'weekly') {
+        const weekStart = getWeekStart(new Date())
+        const { data: existing } = await supabase
+          .from('ritual_completions')
+          .select('*')
+          .eq('ritual_id', ritualId)
+          .gte('date', weekStart)
+          .single()
+
+        if (existing) {
+          await supabase
+            .from('ritual_completions')
+            .update({ completed: !existing.completed })
+            .eq('id', existing.id)
+        } else {
+          await supabase
+            .from('ritual_completions')
+            .insert({
+              ritual_id: ritualId,
+              user_id: user.id,
+              date: today,
+              completed: true,
+            })
+        }
+      }
+
+      await loadData()
+    } catch (error) {
+      console.error('Error toggling ritual:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -305,36 +459,100 @@ export default function Dashboard() {
       <div className="card p-8">
         <h2 className="text-2xl font-display font-bold text-ink mb-6">Today's Focus</h2>
 
-        {habits.length === 0 ? (
+        {habits.length === 0 && rituals.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-ink-light text-lg mb-4">No habits yet</p>
+            <p className="text-ink-light text-lg mb-4">Nothing to focus on yet</p>
             <Link
               to="/discipline"
               className="inline-block px-6 py-3 gradient-discipline text-white rounded-md font-medium hover:shadow-md transition-all"
             >
-              Create Your First Habit
+              Start Your Journey
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
-            {habits.map((habit) => {
-              const completed = isCompletedToday(habit)
-              return (
-                <div key={habit.id} className="flex items-center gap-4 p-4 bg-cream-100 rounded-md">
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs ${
-                    completed
-                      ? 'border-discipline-primary bg-discipline-primary text-white'
-                      : 'border-cream-300'
-                  }`}>
-                    {completed && '✓'}
-                  </div>
-                  <span className="font-medium text-ink flex-1">{habit.name}</span>
-                  {completed && (
-                    <span className="text-sm text-green-600 font-medium">Completed</span>
-                  )}
-                </div>
-              )
-            })}
+          <div className="space-y-4">
+            {/* Habits */}
+            {habits.length > 0 && (
+              <div className="space-y-3">
+                {habits.map((habit) => {
+                  const completed = isCompletedToday(habit)
+                  return (
+                    <div key={habit.id} className="flex items-center gap-4 p-4 bg-cream-100 rounded-md">
+                      <button
+                        onClick={() => handleToggleHabit(habit.id)}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all hover:scale-110 ${
+                          completed
+                            ? 'border-discipline-primary bg-discipline-primary text-white'
+                            : 'border-cream-300'
+                        }`}
+                      >
+                        {completed && '✓'}
+                      </button>
+                      <Link to="/discipline" className="font-medium text-ink flex-1 hover:underline">
+                        {habit.name}
+                      </Link>
+                      {completed && (
+                        <span className="text-sm text-green-600 font-medium">Completed</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Rituals */}
+            {rituals.length > 0 && (
+              <div className="space-y-3">
+                {rituals.map((ritual) => {
+                  const completed = isRitualCompleted(ritual)
+                  return (
+                    <div key={ritual.id} className="flex items-center gap-4 p-4 bg-cream-100 rounded-md">
+                      <button
+                        onClick={() => handleToggleRitual(ritual.id)}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all hover:scale-110 ${
+                          completed
+                            ? 'border-values-primary bg-values-primary text-white'
+                            : 'border-cream-300'
+                        }`}
+                      >
+                        {completed && '✓'}
+                      </button>
+                      <Link to="/values" className="font-medium text-ink flex-1 hover:underline">
+                        {ritual.name}
+                      </Link>
+                      <span className="text-xs text-ink-light">
+                        {ritual.frequency}
+                      </span>
+                      {completed && (
+                        <span className="text-sm text-green-600 font-medium">Completed</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Plan Reminders */}
+            {(dailyPlan || weeklyPlan) && (
+              <div className="pt-4 border-t border-cream-200 flex flex-wrap gap-3">
+                {dailyPlan && (
+                  <Link
+                    to="/control"
+                    className="text-sm text-control-primary hover:underline font-medium"
+                  >
+                    View today's plan →
+                  </Link>
+                )}
+                {weeklyPlan && (
+                  <Link
+                    to="/control"
+                    className="text-sm text-control-primary hover:underline font-medium"
+                  >
+                    Review weekly plan →
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
