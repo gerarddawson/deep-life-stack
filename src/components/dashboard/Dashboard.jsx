@@ -288,7 +288,12 @@ export default function Dashboard() {
       {/* Journey Progress */}
       <div className="card p-8 mb-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-display font-bold text-ink">Your 4-Month Journey</h2>
+          <div>
+            <h2 className="text-2xl font-display font-bold text-ink mb-1">Your 4-Month Journey</h2>
+            <p className="text-sm text-ink-light">
+              Currently in <span className="font-medium text-ink">{currentLayer.charAt(0).toUpperCase() + currentLayer.slice(1)}</span> layer · Day {dayInCurrentLayer} of {LAYER_DURATIONS[currentLayer]}
+            </p>
+          </div>
           <span className="px-4 py-2 rounded-md bg-cream-200 text-ink font-medium">
             Day {journeyDay} of 120
           </span>
@@ -334,28 +339,6 @@ export default function Dashboard() {
             onClick={() => navigate('/vision')}
           />
         </div>
-      </div>
-
-      {/* Today's Progress */}
-      <div className="grid grid-cols-3 gap-6 mb-8">
-        <StatCard
-          title="Habits Today"
-          value={`${habitCompletionToday}/${habits.length}`}
-          color="discipline"
-          onClick={() => navigate('/discipline')}
-        />
-        <StatCard
-          title="Current Layer"
-          value={currentLayer.charAt(0).toUpperCase() + currentLayer.slice(1)}
-          color="values"
-          onClick={() => navigate(`/${currentLayer}`)}
-        />
-        <StatCard
-          title="Days in Layer"
-          value={`${dayInCurrentLayer}/${LAYER_DURATIONS[currentLayer]}`}
-          color="control"
-          onClick={() => navigate(`/${currentLayer}`)}
-        />
       </div>
 
       {/* Today's Focus */}
@@ -415,7 +398,6 @@ function LayerIndicator({ name, day, total, color, progress, onClick }) {
             }}
           />
         )}
-        <span className="relative z-10 text-xs font-semibold text-ink">{Math.round(displayProgress)}%</span>
       </div>
       <div className="font-medium text-ink group-hover:underline">{name}</div>
       <div className="text-sm text-ink-light">{day}/{total} days</div>
@@ -428,14 +410,3 @@ function LayerIndicator({ name, day, total, color, progress, onClick }) {
   )
 }
 
-function StatCard({ title, value, color, onClick }) {
-  return (
-    <div
-      className={`card p-6 text-center ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
-      onClick={onClick}
-    >
-      <div className="text-3xl font-bold text-ink mb-1">{value}</div>
-      <div className="text-sm text-ink-light">{title}</div>
-    </div>
-  )
-}
