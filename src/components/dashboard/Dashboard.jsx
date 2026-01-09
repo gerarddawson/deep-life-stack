@@ -471,66 +471,83 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Habits */}
-            {habits.length > 0 && (
-              <div className="space-y-3">
-                {habits.map((habit) => {
-                  const completed = isCompletedToday(habit)
-                  return (
-                    <div key={habit.id} className="flex items-center gap-4 p-4 bg-cream-100 rounded-md">
-                      <button
-                        onClick={() => handleToggleHabit(habit.id)}
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all hover:scale-110 ${
-                          completed
-                            ? 'border-discipline-primary bg-discipline-primary text-white'
-                            : 'border-cream-300'
-                        }`}
-                      >
-                        {completed && '✓'}
-                      </button>
-                      <Link to="/discipline" className="font-medium text-ink flex-1 hover:underline">
-                        {habit.name}
-                      </Link>
-                      {completed && (
-                        <span className="text-sm text-green-600 font-medium">Completed</span>
-                      )}
-                    </div>
-                  )
-                })}
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Habits Column */}
+              <div>
+                <h3 className="text-sm font-medium text-ink-light mb-3">Habits</h3>
+                {habits.length > 0 ? (
+                  <div className="space-y-3">
+                    {habits.map((habit) => {
+                      const completed = isCompletedToday(habit)
+                      return (
+                        <div key={habit.id} className="flex items-center gap-3 p-3 bg-cream-100 rounded-md">
+                          <button
+                            onClick={() => handleToggleHabit(habit.id)}
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all hover:scale-110 flex-shrink-0 ${
+                              completed
+                                ? 'border-discipline-primary bg-discipline-primary text-white'
+                                : 'border-cream-300'
+                            }`}
+                          >
+                            {completed && '✓'}
+                          </button>
+                          <Link to="/discipline" className="font-medium text-ink flex-1 hover:underline text-sm">
+                            {habit.name}
+                          </Link>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-light/60">No habits yet</p>
+                )}
               </div>
-            )}
 
-            {/* Rituals */}
-            {rituals.length > 0 && (
-              <div className="space-y-3">
-                {rituals.map((ritual) => {
-                  const completed = isRitualCompleted(ritual)
-                  return (
-                    <div key={ritual.id} className="flex items-center gap-4 p-4 bg-cream-100 rounded-md">
-                      <button
-                        onClick={() => handleToggleRitual(ritual.id)}
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all hover:scale-110 ${
-                          completed
-                            ? 'border-values-primary bg-values-primary text-white'
-                            : 'border-cream-300'
-                        }`}
-                      >
-                        {completed && '✓'}
-                      </button>
-                      <Link to="/values" className="font-medium text-ink flex-1 hover:underline">
-                        {ritual.name}
-                      </Link>
-                      <span className="text-xs text-ink-light">
-                        {ritual.frequency}
-                      </span>
-                      {completed && (
-                        <span className="text-sm text-green-600 font-medium">Completed</span>
-                      )}
-                    </div>
-                  )
-                })}
+              {/* Rituals Column */}
+              <div>
+                <h3 className="text-sm font-medium text-ink-light mb-3">Rituals</h3>
+                {rituals.length > 0 ? (
+                  <div className="space-y-3">
+                    {rituals.map((ritual) => {
+                      const completed = isRitualCompleted(ritual)
+                      const isDaily = ritual.frequency === 'daily'
+                      return (
+                        <div
+                          key={ritual.id}
+                          className={`flex items-center gap-3 p-3 rounded-md ${
+                            isDaily ? 'bg-cream-100' : 'bg-cream-100 border-l-2 border-values-primary/30'
+                          }`}
+                        >
+                          <button
+                            onClick={() => handleToggleRitual(ritual.id)}
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all hover:scale-110 flex-shrink-0 ${
+                              completed
+                                ? 'border-values-primary bg-values-primary text-white'
+                                : 'border-cream-300'
+                            }`}
+                          >
+                            {completed && '✓'}
+                          </button>
+                          <Link to="/values" className="font-medium text-ink flex-1 hover:underline text-sm">
+                            {ritual.name}
+                          </Link>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            isDaily
+                              ? 'bg-values-primary/10 text-values-primary'
+                              : 'bg-values-primary/20 text-values-primary font-medium'
+                          }`}>
+                            {isDaily ? 'Daily' : 'Weekly'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-light/60">No rituals yet</p>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Plan Reminders */}
             {(dailyPlan || weeklyPlan) && (

@@ -16,6 +16,7 @@ export default function ActivityGrid({ journeyStartDate }) {
       // Get all activity: completions, values, rituals, plans, aspects, milestones
       const tables = [
         { name: 'completions', dateField: 'created_at' },
+        { name: 'ritual_completions', dateField: 'created_at' },
         { name: 'habits', dateField: 'created_at' },
         { name: 'values', dateField: 'created_at' },
         { name: 'rituals', dateField: 'created_at' },
