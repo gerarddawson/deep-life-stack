@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-parchment text-ink antialiased;
+    font-family: 'Source Serif 4', Georgia, serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', Georgia, serif;
+    @apply text-ink;
+  }
+}
+
+@layer components {
+  /* Layer Gradients - Classic Library Palette */
+  .gradient-discipline {
+    @apply bg-gradient-to-br from-discipline-primary to-discipline-accent;
+  }
+
+  .gradient-values {
+    @apply bg-gradient-to-br from-values-primary to-values-accent;
+  }
+
+  .gradient-control {
+    @apply bg-gradient-to-br from-control-primary to-control-accent;
+  }
+
+  .gradient-vision {
+    @apply bg-gradient-to-br from-vision-primary to-vision-accent;
+  }
+
+  /* Card - Parchment with subtle shadow */
+  .card {
+    @apply bg-cream-50 rounded-lg shadow border border-cream-300;
+  }
+
+  /* Button - Classic styling */
+  .btn-primary {
+    @apply px-6 py-3 rounded-md font-medium transition-all duration-200 hover:shadow-md;
+  }
+
+  /* Elegant text styles */
+  .text-elegant {
+    font-family: 'Playfair Display', Georgia, serif;
+    @apply text-ink;
+  }
+
+  .text-body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    @apply text-ink-light leading-relaxed;
+  }
+
+  /* Classic borders */
+  .border-elegant {
+    @apply border-leather-light/20;
+  }
+
+  /* Leather texture accent */
+  .bg-leather-subtle {
+    @apply bg-leather-light/5;
+  }
+
+  /* Wood texture accent */
+  .bg-wood-subtle {
+    @apply bg-wood-light/5;
+  }
+
+  /* Brass accent */
+  .accent-brass {
+    @apply text-brass;
+  }
+}
