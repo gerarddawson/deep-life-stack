@@ -61,10 +61,10 @@ export default function Dashboard() {
 
       setHabits(habitsData || [])
 
-      // Load all rituals with completions (filter for daily/weekly in UI)
+      // Load all rituals
       const { data: ritualsData, error: ritualsError } = await supabase
         .from('rituals')
-        .select('*, ritual_completions(*)')
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true })
 
@@ -72,14 +72,22 @@ export default function Dashboard() {
         console.error('Error loading rituals:', ritualsError)
       }
 
-      console.log('Loaded rituals:', ritualsData)
+      // Load ritual completions separately
+      const { data: ritualCompletionsData } = await supabase
+        .from('ritual_completions')
+        .select('*')
+        .eq('user_id', user.id)
+
+      // Attach completions to rituals
+      const ritualsWithCompletions = (ritualsData || []).map(ritual => ({
+        ...ritual,
+        ritual_completions: (ritualCompletionsData || []).filter(rc => rc.ritual_id === ritual.id)
+      }))
 
       // Only show daily and weekly rituals on dashboard
-      const dailyWeeklyRituals = (ritualsData || []).filter(r =>
+      const dailyWeeklyRituals = ritualsWithCompletions.filter(r =>
         r.frequency === 'daily' || r.frequency === 'weekly'
       )
-
-      console.log('Filtered daily/weekly rituals:', dailyWeeklyRituals)
 
       setRituals(dailyWeeklyRituals)
 
