@@ -4,17 +4,17 @@ A web application for following Cal Newport's "Deep Life Stack" tactical philoso
 
 ## Overview
 
-This app guides you through a 4-month journey across 4 layers:
-- **Discipline** (Month 1): Core system + 3 keystone habits
-- **Values** (Month 2): Personal code and rituals
-- **Control** (Month 3): Multi-scale planning and organization
-- **Vision** (Month 4): Remarkable life transformation
+This app guides you through a 120-day journey across 4 layers:
+- **Discipline** (Days 1-15): Core system + 3 keystone habits
+- **Values** (Days 16-45): Personal code, core values, and rituals
+- **Control** (Days 46-75): Weekly/daily planning and household systems
+- **Vision** (Days 76-120): Remarkable life aspects and milestones
 
 ## Tech Stack
 
 - **Frontend**: React + Vite + TailwindCSS
 - **Backend**: Supabase (PostgreSQL + Authentication)
-- **Hosting**: Vercel (free tier)
+- **Hosting**: Vercel
 
 ## Setup Instructions
 
@@ -68,18 +68,42 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ## Features
 
-### Currently Implemented
-- ✅ User authentication (sign up / login)
-- ✅ Dashboard with journey progress
-- ✅ Discipline Layer with habit tracking
-- ✅ Streak calculations
-- ✅ Completion rate analytics
-- ✅ Beautiful layer-specific color gradients
+### Dashboard
+- Activity grid (GitHub-style heatmap) showing all 120 days of the journey
+- Today's Focus with two-column layout: habits and rituals
+- Layer progress tracking with visual indicators
+- Quick links to daily and weekly plans
 
-### Coming Soon
-- 🔄 Values Layer (personal code + rituals)
-- 🔄 Control Layer (weekly/daily planning)
-- 🔄 Vision Layer (remarkable life aspects)
+### Discipline Layer (Days 1-15)
+- Create up to 3 keystone habits
+- Daily completion tracking with toggle buttons
+- Habit calendar visualization
+- Streak calculations and completion rate analytics
+- Color-coded habit indicators
+
+### Values Layer (Days 16-45)
+- **Personal Code**: Write and auto-save your personal constitution
+- **Core Values**: Create and organize values with icons and descriptions
+- **Rituals**: Create value-aligned rituals with multiple frequencies (daily, weekly, monthly, quarterly)
+- Link rituals to specific values
+- Ritual completion tracking on dashboard
+
+### Control Layer (Days 46-75)
+- **Weekly Planning**: Set weekly themes, define 3-5 "big rocks", navigate between weeks
+- **Daily Planning**: Set top 3 priorities, time blocking, end-of-day reflection
+- **Household Systems**: Manage household tasks with categories (cleaning, maintenance, finances, etc.)
+- View all past weekly and daily plans
+
+### Vision Layer (Days 76-120)
+- **Remarkable Aspects**: Define goals across 6 life categories (Career, Family, Health, Creativity, Community, Lifestyle)
+- Scale classification (small vs. large overhauls)
+- Status tracking (Planning → In Progress → Completed → On Hold)
+- **Milestones**: Break aspects into sequential milestones with target dates and progress tracking
+
+### Core Features
+- User authentication (sign up / login)
+- Beautiful layer-specific color gradients
+- Responsive design
 
 ## Project Structure
 
@@ -88,8 +112,12 @@ deep-life-web/
 ├── src/
 │   ├── components/
 │   │   ├── auth/           # Authentication components
-│   │   ├── dashboard/      # Dashboard view
+│   │   ├── dashboard/      # Dashboard view with activity grid
 │   │   ├── discipline/     # Discipline layer (habits)
+│   │   ├── values/         # Values layer (personal code, core values, rituals)
+│   │   ├── control/        # Control layer (weekly/daily planning, household)
+│   │   ├── vision/         # Vision layer (remarkable aspects, milestones)
+│   │   ├── landing/        # Marketing landing page
 │   │   └── shared/         # Shared components (Sidebar, etc.)
 │   ├── lib/
 │   │   ├── supabase.js     # Supabase client
@@ -114,17 +142,26 @@ Each layer has its own gradient color scheme:
 
 ## Database Schema
 
-The app uses Supabase (PostgreSQL) with the following main tables:
+The app uses Supabase (PostgreSQL) with the following tables:
 
-- `journeys` - Tracks user's 4-month journey
+### Discipline Layer
+- `journeys` - Tracks user's 120-day journey start date and progress
 - `habits` - Keystone habits (max 3 per user)
 - `completions` - Daily habit completion tracking
-- `values` - Core personal values (future)
-- `rituals` - Value-aligned rituals (future)
-- `weekly_plans` - Weekly planning (future)
-- `daily_plans` - Daily time blocking (future)
-- `remarkable_aspects` - Vision board items (future)
-- `milestones` - Sequential milestones (future)
+
+### Values Layer
+- `personal_code` - User's personal constitution text
+- `values` - Core personal values with icons and descriptions
+- `rituals` - Value-aligned rituals with frequency settings
+- `ritual_completions` - Tracks ritual completion by date
+
+### Control Layer
+- `weekly_plans` - Weekly themes and big rocks (priorities)
+- `daily_plans` - Daily priorities, time blocks, and reflections
+
+### Vision Layer
+- `remarkable_aspects` - Life goals across 6 categories with status tracking
+- `milestones` - Sequential milestones for each aspect
 
 ## Troubleshooting
 
