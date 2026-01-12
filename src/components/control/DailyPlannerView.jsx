@@ -35,7 +35,13 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
 
     if (plan) {
       setCurrentPlan(plan)
-      setTopPriorities(plan.top_priorities || ['', '', ''])
+      // Ensure we always have exactly 3 priority slots, even if saved with fewer
+      const priorities = plan.top_priorities || []
+      setTopPriorities([
+        priorities[0] || '',
+        priorities[1] || '',
+        priorities[2] || ''
+      ])
       setReflection(plan.reflection || '')
       setTimeBlocks(plan.time_blocks || [])
     } else {
