@@ -61,7 +61,7 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
           week_start: weekStartStr,
           theme: theme || null,
           big_rocks: filteredBigRocks,
-        })
+        }, { onConflict: 'user_id,week_start' })
 
       if (error) throw error
 

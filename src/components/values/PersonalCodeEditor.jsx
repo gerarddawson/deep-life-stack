@@ -34,7 +34,7 @@ export default function PersonalCodeEditor({ initialContent, onSave }) {
           user_id: user.id,
           content: content,
           updated_at: new Date().toISOString(),
-        })
+        }, { onConflict: 'user_id' })
 
       if (error) throw error
 

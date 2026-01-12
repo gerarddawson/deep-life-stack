@@ -69,7 +69,7 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
           top_priorities: filteredPriorities,
           reflection: reflection || null,
           time_blocks: timeBlocks,
-        })
+        }, { onConflict: 'user_id,date' })
 
       if (error) throw error
 
