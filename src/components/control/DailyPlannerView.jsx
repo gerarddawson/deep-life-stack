@@ -10,6 +10,7 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
   const [saving, setSaving] = useState(false)
   const [currentPlan, setCurrentPlan] = useState(null)
   const [showPlanList, setShowPlanList] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
 
   function formatDate(date) {
     return date.toLocaleDateString('en-US', {
@@ -44,11 +45,13 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
       ])
       setReflection(plan.reflection || '')
       setTimeBlocks(plan.time_blocks || [])
+      setIsEditing(false) // View mode for saved plans
     } else {
       setCurrentPlan(null)
       setTopPriorities(['', '', ''])
       setReflection('')
       setTimeBlocks([])
+      setIsEditing(true) // Edit mode for new plans
     }
   }
 
@@ -74,11 +77,27 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
       if (error) throw error
 
       await onUpdate()
+      setIsEditing(false) // Return to view mode after saving
     } catch (error) {
       console.error('Error saving daily plan:', error)
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleCancel = () => {
+    if (currentPlan) {
+      // Revert to saved values
+      const priorities = currentPlan.top_priorities || []
+      setTopPriorities([
+        priorities[0] || '',
+        priorities[1] || '',
+        priorities[2] || ''
+      ])
+      setReflection(currentPlan.reflection || '')
+      setTimeBlocks(currentPlan.time_blocks || [])
+    }
+    setIsEditing(false)
   }
 
   const navigateDay = (direction) => {
@@ -193,62 +212,148 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
           </button>
         </div>
 
-        {/* Top 3 Priorities */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Top 3 Priorities
-          </label>
-          <div className="space-y-3">
-            {topPriorities.map((priority, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-control-primary text-white flex items-center justify-center font-bold">
-                  {index + 1}
-                </div>
-                <input
-                  type="text"
-                  value={priority}
-                  onChange={(e) => updatePriority(index, e.target.value)}
-                  placeholder={`Priority ${index + 1}`}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition text-gray-900"
-                />
+        {/* View Mode */}
+        {!isEditing && currentPlan ? (
+          <>
+            {/* Top 3 Priorities - View Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Top 3 Priorities
+              </label>
+              <div className="space-y-2">
+                {currentPlan.top_priorities && currentPlan.top_priorities.length > 0 ? (
+                  currentPlan.top_priorities.map((priority, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-control-primary text-white flex items-center justify-center font-bold">
+                        {index + 1}
+                      </div>
+                      <span className="text-gray-900">{priority}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 italic">No priorities set</p>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* Time Blocking */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Time Blocks
-          </label>
-          <TimeBlockingView
-            timeBlocks={timeBlocks}
-            onChange={setTimeBlocks}
-          />
-        </div>
+            {/* Time Blocks - View Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Time Blocks
+              </label>
+              {currentPlan.time_blocks && currentPlan.time_blocks.length > 0 ? (
+                <div className="space-y-2">
+                  {currentPlan.time_blocks.map((block, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <span className="text-sm font-medium text-gray-600">
+                        {block.start} - {block.end}
+                      </span>
+                      <span className="text-gray-900">{block.title}</span>
+                      {block.category && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-control-primary/20 text-control-primary">
+                          {block.category}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 italic">No time blocks scheduled</p>
+              )}
+            </div>
 
-        {/* Daily Reflection */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Daily Reflection (End of Day)
-          </label>
-          <textarea
-            value={reflection}
-            onChange={(e) => setReflection(e.target.value)}
-            placeholder="What went well? What could be improved? Key learnings?"
-            rows={4}
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition resize-none text-gray-900"
-          />
-        </div>
+            {/* Daily Reflection - View Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Daily Reflection
+              </label>
+              {currentPlan.reflection ? (
+                <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-4 rounded-xl">
+                  {currentPlan.reflection}
+                </p>
+              ) : (
+                <p className="text-gray-500 italic">No reflection added</p>
+              )}
+            </div>
 
-        {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full py-4 gradient-control text-white rounded-xl font-medium text-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-        >
-          {saving ? 'Saving...' : 'Save Daily Plan'}
-        </button>
+            {/* Edit Button */}
+            <button
+              onClick={() => setIsEditing(true)}
+              className="w-full py-4 border-2 border-control-primary text-control-primary rounded-xl font-medium text-lg hover:bg-control-primary/10 transition-colors"
+            >
+              Edit Plan
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Top 3 Priorities - Edit Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Top 3 Priorities
+              </label>
+              <div className="space-y-3">
+                {topPriorities.map((priority, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-control-primary text-white flex items-center justify-center font-bold">
+                      {index + 1}
+                    </div>
+                    <input
+                      type="text"
+                      value={priority}
+                      onChange={(e) => updatePriority(index, e.target.value)}
+                      placeholder={`Priority ${index + 1}`}
+                      className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition text-gray-900"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Time Blocking - Edit Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Time Blocks
+              </label>
+              <TimeBlockingView
+                timeBlocks={timeBlocks}
+                onChange={setTimeBlocks}
+              />
+            </div>
+
+            {/* Daily Reflection - Edit Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Daily Reflection (End of Day)
+              </label>
+              <textarea
+                value={reflection}
+                onChange={(e) => setReflection(e.target.value)}
+                placeholder="What went well? What could be improved? Key learnings?"
+                rows={4}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition resize-none text-gray-900"
+              />
+            </div>
+
+            {/* Save and Cancel Buttons */}
+            <div className="flex gap-3">
+              {currentPlan && (
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium text-lg hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-4 gradient-control text-white rounded-xl font-medium text-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {saving ? 'Saving...' : 'Save Daily Plan'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
