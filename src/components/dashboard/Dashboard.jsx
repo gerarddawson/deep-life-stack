@@ -69,8 +69,8 @@ export default function Dashboard() {
         supabase.from('rituals').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
         // Ritual completions
         supabase.from('ritual_completions').select('*').eq('user_id', user.id),
-        // Personal code
-        supabase.from('personal_code').select('id, created_at').eq('user_id', user.id),
+        // Personal code (uses updated_at, not created_at)
+        supabase.from('personal_code').select('id, updated_at').eq('user_id', user.id),
         // Weekly plans
         supabase.from('weekly_plans').select('id, created_at').eq('user_id', user.id),
         // Daily plans
