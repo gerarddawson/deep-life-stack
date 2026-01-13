@@ -27,98 +27,6 @@ export default function Dashboard() {
     loadData()
   }, [])
 
-  const loadData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      // Load journey
-      const { data: journeyData } = await supabase
-        .from('journeys')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-
-      setJourney(journeyData)
-
-      // Calculate journey start date from first action across all tables
-      const startDate = await calculateJourneyStartDate(user.id)
-      setJourneyStartDate(startDate)
-
-      // Determine current layer based on what user has started
-      const current = await determineCurrentLayer(user.id)
-      setCurrentLayer(current)
-
-      // Calculate progress for each layer
-      const progress = await calculateLayerProgress(user.id)
-      setLayerProgress(progress)
-
-      // Load habits with today's completions
-      const { data: habitsData } = await supabase
-        .from('habits')
-        .select('*, completions(*)')
-        .eq('user_id', user.id)
-        .order('order', { ascending: true })
-
-      setHabits(habitsData || [])
-
-      // Load all rituals
-      const { data: ritualsData, error: ritualsError } = await supabase
-        .from('rituals')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true })
-
-      if (ritualsError) {
-        console.error('Error loading rituals:', ritualsError)
-      }
-
-      // Load ritual completions separately
-      const { data: ritualCompletionsData } = await supabase
-        .from('ritual_completions')
-        .select('*')
-        .eq('user_id', user.id)
-
-      // Attach completions to rituals
-      const ritualsWithCompletions = (ritualsData || []).map(ritual => ({
-        ...ritual,
-        ritual_completions: (ritualCompletionsData || []).filter(rc => rc.ritual_id === ritual.id)
-      }))
-
-      // Only show daily and weekly rituals on dashboard
-      const dailyWeeklyRituals = ritualsWithCompletions.filter(r =>
-        r.frequency === 'daily' || r.frequency === 'weekly'
-      )
-
-      setRituals(dailyWeeklyRituals)
-
-      // Load today's daily plan
-      const today = new Date().toISOString().split('T')[0]
-      const { data: dailyPlanData } = await supabase
-        .from('daily_plans')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .maybeSingle()
-
-      setDailyPlan(dailyPlanData)
-
-      // Load this week's weekly plan
-      const weekStart = getWeekStart(new Date())
-      const { data: weeklyPlanData } = await supabase
-        .from('weekly_plans')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('week_start', weekStart)
-        .maybeSingle()
-
-      setWeeklyPlan(weeklyPlanData)
-    } catch (error) {
-      console.error('Error loading data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const getWeekStart = (date) => {
     const d = new Date(date)
     const day = d.getDay()
@@ -127,170 +35,137 @@ export default function Dashboard() {
     return monday.toISOString().split('T')[0]
   }
 
-  const calculateJourneyStartDate = async (userId) => {
-    // Check all tables for earliest created_at
-    const tables = [
-      'habits',
-      'values',
-      'rituals',
-      'weekly_plans',
-      'daily_plans',
-      'remarkable_aspects'
-    ]
+  const loadData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const today = new Date().toISOString().split('T')[0]
+      const weekStart = getWeekStart(new Date())
 
-    let earliestDate = null
+      // Run ALL queries in parallel for maximum performance
+      const [
+        journeyResult,
+        habitsResult,
+        completionsResult,
+        valuesResult,
+        ritualsResult,
+        ritualCompletionsResult,
+        personalCodeResult,
+        weeklyPlansResult,
+        dailyPlansResult,
+        aspectsResult,
+        milestonesResult,
+        todaysPlanResult,
+        thisWeeksPlanResult
+      ] = await Promise.all([
+        // Journey
+        supabase.from('journeys').select('*').eq('user_id', user.id).single(),
+        // Habits with completions
+        supabase.from('habits').select('*, completions(*)').eq('user_id', user.id).order('order', { ascending: true }),
+        // All completions (for progress calculation)
+        supabase.from('completions').select('id, created_at').eq('user_id', user.id),
+        // Values
+        supabase.from('values').select('id, created_at').eq('user_id', user.id),
+        // Rituals
+        supabase.from('rituals').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+        // Ritual completions
+        supabase.from('ritual_completions').select('*').eq('user_id', user.id),
+        // Personal code
+        supabase.from('personal_code').select('id, created_at').eq('user_id', user.id),
+        // Weekly plans
+        supabase.from('weekly_plans').select('id, created_at').eq('user_id', user.id),
+        // Daily plans
+        supabase.from('daily_plans').select('id, created_at').eq('user_id', user.id),
+        // Remarkable aspects
+        supabase.from('remarkable_aspects').select('id, created_at').eq('user_id', user.id),
+        // Milestones
+        supabase.from('milestones').select('id').eq('user_id', user.id),
+        // Today's plan
+        supabase.from('daily_plans').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
+        // This week's plan
+        supabase.from('weekly_plans').select('*').eq('user_id', user.id).eq('week_start', weekStart).maybeSingle()
+      ])
 
-    for (const table of tables) {
-      const { data } = await supabase
-        .from(table)
-        .select('created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true })
-        .limit(1)
+      // Extract data from results
+      const habitsData = habitsResult.data || []
+      const completionsData = completionsResult.data || []
+      const valuesData = valuesResult.data || []
+      const ritualsData = ritualsResult.data || []
+      const ritualCompletionsData = ritualCompletionsResult.data || []
+      const personalCodeData = personalCodeResult.data || []
+      const weeklyPlansData = weeklyPlansResult.data || []
+      const dailyPlansData = dailyPlansResult.data || []
+      const aspectsData = aspectsResult.data || []
+      const milestonesData = milestonesResult.data || []
 
-      if (data && data.length > 0) {
-        const date = new Date(data[0].created_at)
-        if (!earliestDate || date < earliestDate) {
-          earliestDate = date
+      // Set journey
+      setJourney(journeyResult.data)
+
+      // Calculate journey start date from earliest created_at across all data
+      const allDates = [
+        ...habitsData.map(h => h.created_at),
+        ...valuesData.map(v => v.created_at),
+        ...ritualsData.map(r => r.created_at),
+        ...weeklyPlansData.map(w => w.created_at),
+        ...dailyPlansData.map(d => d.created_at),
+        ...aspectsData.map(a => a.created_at)
+      ].filter(Boolean).map(d => new Date(d))
+
+      const earliestDate = allDates.length > 0 ? new Date(Math.min(...allDates)) : null
+      setJourneyStartDate(earliestDate)
+
+      // Determine current layer from data we already have
+      let current = 'discipline'
+      if (aspectsData.length > 0) {
+        current = 'vision'
+      } else if (weeklyPlansData.length > 0 || dailyPlansData.length > 0) {
+        current = 'control'
+      } else if (valuesData.length > 0 || ritualsData.length > 0 || personalCodeData.length > 0) {
+        current = 'values'
+      }
+      setCurrentLayer(current)
+
+      // Calculate layer progress from data we already have
+      const progress = {
+        discipline: {
+          items: habitsData.length + completionsData.length,
+          max: 3 + 45
+        },
+        values: {
+          items: valuesData.length + ritualsData.length + personalCodeData.length,
+          max: 10
+        },
+        control: {
+          items: weeklyPlansData.length + dailyPlansData.length,
+          max: 8
+        },
+        vision: {
+          items: aspectsData.length + milestonesData.length,
+          max: 10
         }
       }
+      setLayerProgress(progress)
+
+      // Set habits
+      setHabits(habitsData)
+
+      // Attach completions to rituals and filter for daily/weekly
+      const ritualsWithCompletions = ritualsData.map(ritual => ({
+        ...ritual,
+        ritual_completions: ritualCompletionsData.filter(rc => rc.ritual_id === ritual.id)
+      }))
+      const dailyWeeklyRituals = ritualsWithCompletions.filter(r =>
+        r.frequency === 'daily' || r.frequency === 'weekly'
+      )
+      setRituals(dailyWeeklyRituals)
+
+      // Set plans
+      setDailyPlan(todaysPlanResult.data)
+      setWeeklyPlan(thisWeeksPlanResult.data)
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
     }
-
-    return earliestDate
-  }
-
-  const determineCurrentLayer = async (userId) => {
-    // Check which layers have data (furthest layer user has started)
-    const layers = ['vision', 'control', 'values', 'discipline']
-
-    for (const layer of layers) {
-      const hasData = await layerHasData(userId, layer)
-      if (hasData) {
-        return layer
-      }
-    }
-
-    return 'discipline'
-  }
-
-  const layerHasData = async (userId, layer) => {
-    switch (layer) {
-      case 'discipline':
-        const { data: habits } = await supabase
-          .from('habits')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1)
-        return habits && habits.length > 0
-
-      case 'values':
-        const { data: values } = await supabase
-          .from('values')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1)
-        const { data: rituals } = await supabase
-          .from('rituals')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1)
-        const { data: code } = await supabase
-          .from('personal_code')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1)
-        return (values && values.length > 0) || (rituals && rituals.length > 0) || (code && code.length > 0)
-
-      case 'control':
-        const { data: weekly } = await supabase
-          .from('weekly_plans')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1)
-        const { data: daily } = await supabase
-          .from('daily_plans')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1)
-        return (weekly && weekly.length > 0) || (daily && daily.length > 0)
-
-      case 'vision':
-        const { data: aspects } = await supabase
-          .from('remarkable_aspects')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1)
-        return aspects && aspects.length > 0
-
-      default:
-        return false
-    }
-  }
-
-  const calculateLayerProgress = async (userId) => {
-    const progress = {}
-
-    // Discipline: count habits + completions
-    const { data: habits } = await supabase
-      .from('habits')
-      .select('id')
-      .eq('user_id', userId)
-    const { data: completions } = await supabase
-      .from('completions')
-      .select('id')
-      .eq('user_id', userId)
-    progress.discipline = {
-      items: (habits?.length || 0) + (completions?.length || 0),
-      max: 3 + 45 // 3 habits + 3*15 days of completions
-    }
-
-    // Values: count values + rituals + personal code
-    const { data: values } = await supabase
-      .from('values')
-      .select('id')
-      .eq('user_id', userId)
-    const { data: rituals } = await supabase
-      .from('rituals')
-      .select('id')
-      .eq('user_id', userId)
-    const { data: code } = await supabase
-      .from('personal_code')
-      .select('id')
-      .eq('user_id', userId)
-    progress.values = {
-      items: (values?.length || 0) + (rituals?.length || 0) + (code?.length || 0),
-      max: 10 // 5 values + 4 rituals + 1 code
-    }
-
-    // Control: count plans
-    const { data: weekly } = await supabase
-      .from('weekly_plans')
-      .select('id')
-      .eq('user_id', userId)
-    const { data: daily } = await supabase
-      .from('daily_plans')
-      .select('id')
-      .eq('user_id', userId)
-    progress.control = {
-      items: (weekly?.length || 0) + (daily?.length || 0),
-      max: 8 // 4 weeks + 4 days tracked
-    }
-
-    // Vision: count aspects + milestones
-    const { data: aspects } = await supabase
-      .from('remarkable_aspects')
-      .select('id')
-      .eq('user_id', userId)
-    const { data: milestones } = await supabase
-      .from('milestones')
-      .select('id')
-      .eq('user_id', userId)
-    progress.vision = {
-      items: (aspects?.length || 0) + (milestones?.length || 0),
-      max: 10 // 3 aspects + 7 milestones
-    }
-
-    return progress
   }
 
   const isCompletedToday = (habit) => {
