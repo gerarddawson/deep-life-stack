@@ -1,7 +1,15 @@
 import { calculateCurrentStreak, calculateCompletionRate } from '../../lib/calculations'
 
+// Get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
+function getLocalDateString(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function HabitCard({ habit, onToggle, onEdit }) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString(new Date())
   const isCompletedToday = habit.completions?.some(c =>
     c.date === today && c.completed
   )

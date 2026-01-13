@@ -11,6 +11,14 @@ export default function DisciplineLayer() {
   const [editingHabit, setEditingHabit] = useState(null)
   const [firstHabitDate, setFirstHabitDate] = useState(null)
 
+  // Get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
+  function getLocalDateString(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   useEffect(() => {
     loadHabits()
   }, [])
@@ -32,7 +40,7 @@ export default function DisciplineLayer() {
       if (data && data.length > 0) {
         const dates = data.map(h => new Date(h.created_at))
         const earliest = new Date(Math.min(...dates))
-        setFirstHabitDate(earliest.toISOString().split('T')[0])
+        setFirstHabitDate(getLocalDateString(earliest))
       }
     } catch (error) {
       console.error('Error loading habits:', error)
@@ -44,7 +52,7 @@ export default function DisciplineLayer() {
   const handleToggleCompletion = async (habitId) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDateString(new Date())
 
       // Check if already completed today
       const { data: existing } = await supabase
@@ -141,7 +149,7 @@ export default function DisciplineLayer() {
   }
 
   // Get today's date
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString(new Date())
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',

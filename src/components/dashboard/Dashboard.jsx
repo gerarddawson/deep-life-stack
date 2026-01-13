@@ -23,6 +23,14 @@ export default function Dashboard() {
   const [currentLayer, setCurrentLayer] = useState('discipline')
   const [layerProgress, setLayerProgress] = useState({})
 
+  // Get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
+  function getLocalDateString(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   useEffect(() => {
     loadData()
   }, [])
@@ -32,13 +40,13 @@ export default function Dashboard() {
     const day = d.getDay()
     const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Adjust to Monday
     const monday = new Date(d.setDate(diff))
-    return monday.toISOString().split('T')[0]
+    return getLocalDateString(monday)
   }
 
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDateString(new Date())
       const weekStart = getWeekStart(new Date())
 
       // Run ALL queries in parallel for maximum performance
@@ -169,7 +177,7 @@ export default function Dashboard() {
   }
 
   const isCompletedToday = (habit) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateString(new Date())
     return habit.completions?.some(c =>
       c.date === today && c.completed
     )
@@ -178,7 +186,7 @@ export default function Dashboard() {
   const handleToggleHabit = async (habitId) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDateString(new Date())
 
       const { data: existing } = await supabase
         .from('completions')
@@ -210,7 +218,7 @@ export default function Dashboard() {
   }
 
   const isRitualCompleted = (ritual) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateString(new Date())
     if (ritual.frequency === 'daily') {
       return ritual.ritual_completions?.some(c =>
         c.date === today && c.completed
@@ -228,7 +236,7 @@ export default function Dashboard() {
   const handleToggleRitual = async (ritualId) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDateString(new Date())
       const ritual = rituals.find(r => r.id === ritualId)
 
       if (ritual.frequency === 'daily') {

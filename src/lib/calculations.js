@@ -1,3 +1,11 @@
+// Get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
+function getLocalDateString(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 /**
  * Calculate the current streak for a habit based on completions
  * @param {Array} completions - Array of completion objects with date and completed fields
@@ -13,8 +21,10 @@ export function calculateCurrentStreak(completions) {
 
   if (completed.length === 0) return 0
 
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  const today = getLocalDateString(new Date())
+  const yesterdayDate = new Date()
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterday = getLocalDateString(yesterdayDate)
 
   // Check if the most recent completion is today or yesterday
   const mostRecent = completed[0].date
@@ -25,11 +35,11 @@ export function calculateCurrentStreak(completions) {
   let currentDate = new Date()
 
   for (let i = 0; i < completed.length; i++) {
-    const expectedDate = new Date(currentDate).toISOString().split('T')[0]
+    const expectedDate = getLocalDateString(currentDate)
 
     if (completed[i].date === expectedDate) {
       streak++
-      currentDate = new Date(currentDate.getTime() - 86400000) // Go back one day
+      currentDate.setDate(currentDate.getDate() - 1) // Go back one day
     } else {
       break
     }
@@ -107,7 +117,7 @@ export function getHeatmapData(completions, days = 30) {
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today)
     date.setDate(date.getDate() - i)
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = getLocalDateString(date)
 
     const completion = completions?.find(c => c.date === dateStr)
 

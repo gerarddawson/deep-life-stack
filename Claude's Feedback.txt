@@ -1,0 +1,608 @@
+================================================================================
+DEEP LIFE STACK WEB APP - COMPREHENSIVE USER EXPERIENCE REVIEW
+Claude's Feedback - January 2026
+================================================================================
+
+Generated after thorough analysis of the entire codebase from a user's
+perspective. This review focuses on redundancies, frustrations, unmet
+expectations, and opportunities to make the app more elegant and powerful
+for achieving the 4-month transformation journey.
+
+================================================================================
+1. USER FLOW & NAVIGATION - "Intuitive but Siloed"
+================================================================================
+
+STRENGTHS:
+----------
+- Clear hierarchical structure: Landing → Auth → Dashboard → 4 Layers
+- Consistent sidebar navigation: All layers accessible from one place
+- Well-labeled CTAs: "Start Your Journey" button is prominent
+
+ISSUES & DEAD ENDS:
+------------------
+
+Navigation Gaps:
+
+1. LIMITED JOURNEY AWARENESS
+   - Once logged in, the journey sequencing (Discipline → Values → Control →
+     Vision) is NOT enforced. Users can jump to any layer immediately, losing
+     the pedagogical foundation.
+   - File: /Dashboard.jsx (lines 162-174) - The app "determines" current layer
+     but doesn't guide users through the proper sequence
+   - FRUSTRATION: A user new to Cal Newport's framework doesn't know they
+     should start with Discipline first
+
+2. DASHBOARD DOESN'T EDUCATE
+   - The Dashboard shows today's focus but doesn't guide which layer to work
+     on next
+   - File: /Dashboard.jsx (lines 479-595) - Shows habits and rituals only if
+     they exist, but has no "recommended next step" or breadcrumb showing
+     progress through the 4-month journey
+
+3. NO "ONBOARDING FLOW"
+   - New users land on Dashboard with empty cards and limited guidance
+   - File: /Dashboard.jsx (lines 482-490) - Empty state just links to
+     Discipline but doesn't explain why
+
+4. MODAL-BASED EDITING BREAKS CONTEXT
+   - When editing a habit, ritual, or value in a modal, users lose their
+     current view. If they cancel, they're back at the grid - but modal state
+     isn't preserved if they navigate away
+   - Files: Multiple - AddHabitModal.jsx, AddValueModal.jsx, etc. use
+     full-screen overlays that interrupt flow
+
+Navigation Dead Ends:
+
+1. CONTROL LAYER'S "HOUSEHOLD SYSTEMS" SAVES ONLY TO LOCALSTORAGE
+   - Users create household system categories/items, but they aren't synced
+     to the database
+   - File: /HouseholdSystemsView.jsx (lines 19-29) - Uses localStorage, not
+     Supabase
+   - FRUSTRATION: User expects sync across devices like other features, but
+     it doesn't happen. Warning is small (line 172-177)
+
+2. "AUTOMATIONS" TAB EXISTS BUT IS COMPLETELY EMPTY
+   - File: /ControlLayer.jsx (line 126-130) - Tab renders but has no content
+     component
+   - FRUSTRATION: Users click it expecting functionality; instead see nothing
+
+================================================================================
+2. REDUNDANCIES - "Duplicate Patterns & Unnecessary Complexity"
+================================================================================
+
+REPETITIVE UI PATTERNS (GOOD):
+------------------------------
+- Add/Edit modal pattern is consistent across all entities (habits, values,
+  rituals, aspects, milestones)
+- Duplicate name checking is implemented consistently
+
+PROBLEMATIC REDUNDANCIES:
+------------------------
+
+1. DASHBOARD VS. LAYER VIEWS SHOW SAME DATA
+   - Habits appear on Dashboard and Discipline Layer with similar UI
+   - Rituals appear on Dashboard and Values Layer
+   - Daily/Weekly plans appear on Dashboard and Control Layer
+   - ISSUE: Users don't know where to manage these items. Should they edit
+     on Dashboard or go to the layer?
+   - Files: /Dashboard.jsx, /DisciplineLayer.jsx, /ValuesLayer.jsx,
+     /ControlLayer.jsx
+   - RESULT: Work across multiple "views" feels fragmented
+
+2. MULTIPLE WAYS TO NAVIGATE BETWEEN SIMILAR SCREENS
+   - Weekly plans have a "quick access list" dropdown (lines 115-164 in
+     WeeklyPlannerView.jsx)
+   - Daily plans have the same pattern (lines 105-161 in DailyPlannerView.jsx)
+   - But they're implemented identically - reusable component opportunity
+     missed
+   - MAINTENANCE BURDEN: If the UI needs updating, it must be changed in two
+     places
+
+3. REDUNDANT "EMPTY STATE" MESSAGING
+   - Every layer shows a similar pattern:
+     * Info card explaining the layer
+     * "Add X" button when list is empty
+     * Large centered card saying "No X Yet"
+   - Seen 15+ times across the app - Creates cognitive load for new users
+
+4. LAYER PROGRESS INDICATORS APPEAR IN TWO PLACES
+   - Header badge showing count (habits: "0/3", values: "0", etc.)
+   - Dashboard shows aggregated progress with layer progress calculation
+     (lines 230-294 in Dashboard.jsx)
+   - ISSUE: These use different metrics. Habits count completions in progress,
+     but values just count total values. Inconsistent mental model.
+
+5. DATE CALCULATIONS SCATTERED
+   - getWeekStart() function copied in Dashboard AND DailyPlannerView AND
+     WeeklyPlannerView
+   - getMonday() is redefined in WeeklyPlannerView
+   - File: lib/calculations.js exists but doesn't have these utilities
+   - MAINTENANCE: Single source of truth needed, fewer bugs
+
+6. WEEKLY/DAILY PLANNER DUPLICATION
+   - WeeklyPlannerView.jsx (265 lines) and DailyPlannerView.jsx (250 lines)
+     are 95% the same
+     * Same "all plans" dropdown list (15+ lines of identical code)
+     * Same date navigation buttons
+     * Same save/loading logic
+   - SIMPLIFICATION OPPORTUNITY: Create a PlannerView component that accepts
+     granularity: 'weekly' or 'daily'
+   - RESULT: 150 lines → 100 lines, easier to maintain
+
+================================================================================
+3. FRUSTRATIONS & UNCLEAR STATES - "Ambiguity & Missing Feedback"
+================================================================================
+
+MISSING FEEDBACK:
+----------------
+
+1. NO CONFIRMATION OF SAVES
+   - Personal Code Editor has auto-save (line 15-22 in PersonalCodeEditor.jsx),
+     which is good
+   - Other saves (weekly plans, daily plans) use manual "Save" button with no
+     success toast/message
+   - Files: WeeklyPlannerView.jsx (line 259), DailyPlannerView.jsx (line 244)
+   - FRUSTRATION: Did my plan save? Silence = uncertainty
+
+2. COMPLETION STATE IS AMBIGUOUS
+   - Habit can be marked complete on Dashboard, Discipline Layer, AND HabitCard
+   - Ritual has frequency labels (Daily/Weekly) but it's unclear if clicking
+     the same ritual twice completes it multiple times
+   - Files: Dashboard.jsx (lines 337-351), DailyPlannerView.jsx
+   - Logic exists but UI doesn't clarify weekly completion windows
+
+3. NO "UNSAVED CHANGES" WARNING
+   - If user edits a habit name, then navigates away without saving, no warning
+   - If user navigates between weeks in Weekly Planner mid-edit, form resets
+     without warning
+   - Files: WeeklyPlannerView.jsx (lines 30-31), DailyPlannerView.jsx
+     (lines 28-30) - useEffect dependencies reload on navigation
+
+4. PROGRESS CALCULATIONS ARE HIDDEN
+   - Dashboard shows "Day 120 of 120" but logic to determine this is in
+     Component (lines 422-435)
+   - Users can't understand how progress is calculated
+   - FRUSTRATION: "Why does it say Day 50 when I started 50 days ago?"
+     (off by one errors possible in date math)
+
+5. MILESTONE "COMPLETED" STATE IS UNCLEAR
+   - Completed milestones show green highlighting and strikethrough (line 242
+     in AspectDetailView.jsx)
+   - But there's no visual indication of the completed date until after you
+     complete it
+   - FRUSTRATION: "Did I actually complete this milestone?" (Yes, but you
+     need to hover/click to see when)
+
+6. UNCLEAR MODAL DISMISS BEHAVIOR
+   - Modals have X button to close (line 48 in AddHabitModal.jsx)
+   - But pressing Escape doesn't close them (not implemented)
+   - FRUSTRATION: User expects standard web behavior
+
+AMBIGUOUS STATES:
+----------------
+
+1. "CURRENT LAYER" ON DASHBOARD
+   - Shows which layer user is "currently in" but what does that mean?
+   - Is it the layer they should focus on? Or just the highest layer with data?
+   - Lines 162-169 in Dashboard.jsx
+   - CONFUSION: User doesn't know if they should stop working on Discipline
+     and move to Values
+
+2. PLAN VS. "NEXT TO DO"
+   - Daily plans show "Top 3 Priorities" but also have "Time Blocks"
+   - If a priority isn't in a time block, is it real?
+   - How do completed daily priorities feed into the next day?
+   - File: DailyPlannerView.jsx
+   - CONFUSION: Two different systems without clear relationship
+
+3. RITUAL FREQUENCY BEHAVIOR
+   - Daily rituals: "complete once per day"
+   - Weekly rituals: "complete once per week"
+   - But what week? Calendar week (Sun-Sat) or running week?
+   - Lines 343-348 in Dashboard.jsx uses Monday-based week
+   - CONFUSION: If I complete a weekly ritual on Sunday, is it done for this
+     week or next week?
+
+4. ACTIVITY GRID COLOR INTENSITY
+   - Shows more activity with darker colors, but threshold is arbitrary
+     (1-2 activities = light, 5-10 = darker)
+   - Lines 84-90 in ActivityGrid.jsx
+   - CONFUSION: What does "activity" mean? A completed habit? A created value?
+     They're all weighted equally.
+
+================================================================================
+4. UNMET EXPECTATIONS - "Missing Connections & Power Features"
+================================================================================
+
+EXPECTED BUT MISSING FEATURES:
+------------------------------
+
+1. CROSS-LAYER CONNECTIONS ARE INVISIBLE
+   - Users create habits in Discipline layer
+   - But there's no way to link a habit to a value or to see which habits
+     support which values
+   - EXPECTATION: "Show me which habits align with my top values"
+   - Users create rituals in Values layer and link to values
+   - But there's no connection to daily/weekly plans in Control layer
+   - EXPECTATION: "My morning ritual should automatically appear in tomorrow's
+     daily plan"
+
+2. NO PROGRESS VISUALIZATION ACROSS LAYERS
+   - Each layer has progress independently, but no cross-layer trend
+   - EXPECTATION: "I've made 30% progress through the 4-month journey, with
+     this breakdown per layer"
+   - Activity Grid shows activity but not "which layer got the most activity"
+
+3. NO "NEXT RECOMMENDED ACTION"
+   - Dashboard shows what exists, but doesn't suggest what to do next
+   - EXPECTED: "You completed 2/3 habits today. Next: Review your weekly
+     priorities"
+   - EXPECTED: "You have 3 core values. Next: Create rituals aligned with them"
+
+4. NO WEEKLY REVIEW PROMPT/TEMPLATE
+   - Vision layer has milestones, but no "weekly review" feature
+   - EXPECTED: Sunday evening, app prompts "Review this week's progress.
+     What worked? What didn't?"
+   - File: DailyPlannerView.jsx has a "reflection" field (line 230) but it's
+     end-of-day, not weekly
+
+5. NO MOBILE-FIRST DESIGN
+   - App is tablet/desktop optimized, but modern users expect mobile support
+   - Sidebar is fixed width (256px, line 20 in Sidebar.jsx), which crushes
+     mobile UI
+   - EXPECTATION: App works seamlessly on phone for quick habit checks
+
+6. NO NOTIFICATIONS/REMINDERS
+   - No push notifications to remind users of habits, rituals, or daily plans
+   - EXPECTATION: "Remind me to complete my morning habit at 7 AM"
+
+7. NO DATA EXPORT/BACKUP
+   - No way to download your journey data
+   - EXPECTATION: "Export my 4-month progress as PDF"
+
+8. NO "UNDO" FUNCTIONALITY
+   - Deletes ask for confirmation, but there's no undo after deletion
+   - FRUSTRATION: "I accidentally deleted my aspect. Can I get it back?" (No)
+
+9. NO GOAL-HABIT LINKING
+   - Aspects/Milestones exist separately from habits
+   - EXPECTED: "My '5K running' milestone should track my 'morning exercise'
+     habit"
+
+10. NO COLLABORATIVE MODE
+    - All data is per-user; no shared accountability
+    - EXPECTED: "I want to share my daily plan with my partner for
+      accountability"
+
+11. NO TEMPLATING/TEMPLATES
+    - If you create a weekly plan, can't use it as a template for next week
+    - FRUSTRATION: Typing "Exercise, Meetings, Family time" again next week
+
+12. NO BULK OPERATIONS
+    - Can't mark multiple habits complete at once
+    - Can't delete multiple habits in batch
+    - FRUSTRATION: 10 habits to delete = 10 delete clicks
+
+================================================================================
+5. ELEGANCE OPPORTUNITIES - "Where Simplification Wins"
+================================================================================
+
+CURRENT COMPLEXITY THAT COULD BE REDUCED:
+-----------------------------------------
+
+1. DASHBOARD IS FEATURE-OVERLOADED
+   - File: /Dashboard.jsx is 599 lines, calculates journey start date, layer
+     progress, and displays 3 sections
+   - SIMPLIFICATION: Move "layer progress calculation" to a utility function;
+     move "journey timeline" to separate component
+   - CURRENT: User sees habits AND rituals AND plan reminders, all competing
+     for attention
+   - ELEGANCE: Show ONLY today's top 3 actions (pick the most urgent from
+     each category)
+
+2. WEEKLY/DAILY PLANNER DUPLICATION
+   - WeeklyPlannerView.jsx (265 lines) and DailyPlannerView.jsx (250 lines)
+     are 95% the same
+     * Same "all plans" dropdown list (15+ lines of identical code)
+     * Same date navigation buttons
+     * Same save/loading logic
+   - SIMPLIFICATION: Create a PlannerView component that accepts
+     granularity: 'weekly' or 'daily'
+   - RESULT: 150 lines → 100 lines, easier to maintain
+
+3. HABIT CARD REDUNDANCY
+   - Habits shown on Dashboard (3 properties)
+   - Habits shown on Discipline Layer as cards (3 properties)
+   - Habits shown on Discipline Layer as list in "Today's Habits" (same 3
+     properties)
+   - SIMPLIFICATION: One card component, reused everywhere
+   - CURRENT: 60 lines of repeated logic in DisciplineLayer.jsx
+
+4. MODAL FORM PATTERNS
+   - 5 different add/edit modals (Habit, Value, Ritual, Aspect, Milestone)
+   - Each has name, description, color/category picker
+   - SIMPLIFICATION: Create a generic FormModal component with configurable
+     fields
+   - ELEGANCE: 5 × 80 lines → 1 × 120 lines + 5 × 10 lines of configuration
+
+5. DATE CALCULATIONS SCATTERED
+   - getWeekStart() function copied in Dashboard AND DailyPlannerView AND
+     WeeklyPlannerView
+   - getMonday() is redefined in WeeklyPlannerView
+   - File: lib/calculations.js exists but doesn't have these utilities
+   - SIMPLIFICATION: Move all date math to /lib/calculations.js
+   - RESULT: Single source of truth, fewer bugs
+
+6. LAYER COLOR SYSTEM IS HARD-CODED
+   - Colors defined in Tailwind config, then referenced as strings:
+     gradient-discipline, bg-discipline-primary
+   - Every component manually maps category → color
+   - File: AspectDetailView.jsx (lines 5-18) has a categoryInfo object that
+     hardcodes colors
+   - SIMPLIFICATION: lib/colors.js exports a color map function
+     getLayerColor('discipline') → { primary, accent, gradient }
+     getCategoryColor('career') → { icon, color }
+
+7. EDIT VS. ADD BUTTON LOGIC
+   - Every layer has showAddModal and editingX state
+   - When either is true, modal opens
+   - SIMPLIFICATION: Single isModalOpen boolean + optional editData prop
+     const [formData, setFormData] = useState(null)
+     // null = add mode, object = edit mode
+
+8. VALIDATION IS MINIMAL
+   - Forms check for duplicate names with .find() in component
+   - No validation for empty descriptions, invalid dates, etc.
+   - SIMPLIFICATION: Move to a shared validation layer
+     validateHabit(name, description) → { isValid, errors }
+
+9. SUPABASE QUERIES ARE VERBOSE
+   - Every component has its own .select(), .eq(), .order() chains
+   - Error handling is missing in several places
+   - SIMPLIFICATION: Create a useData hook that wraps common queries
+     const { habits, loading } = useData('habits', userId)
+     const { weeklyPlans } = useData('weeklyPlans', userId)
+
+10. COMPLETION STATUS LOGIC IS DUPLICATED
+    - Checking if habit is completed today: lines 296-301 in Dashboard,
+      lines 181-183 in DisciplineLayer
+    - Checking if ritual is completed: lines 337-351 in Dashboard (different
+      logic than ritual completions!)
+    - SIMPLIFICATION:
+      useCompletion(habitId, 'today') → boolean
+      useCompletion(ritualId, 'this-week') → boolean
+
+UI SIMPLIFICATION:
+-----------------
+
+1. REMOVE REDUNDANT "EMPTY STATES"
+   - Replace every "No X Yet" card with a small inline message + one button
+   - RESULT: Cleaner, less repetitive
+
+2. CONSOLIDATE ACTION BUTTONS
+   - Every layer has "+ Add" at the top
+   - Could use a floating action button (FAB) or drawer
+   - RESULT: More space for content
+
+3. ACTIVITY GRID IS CLEVER BUT CONFUSING
+   - Shows activity intensity by color
+   - But mix of all activities (habit completions, value creation, plan
+     creation) muddies the signal
+   - SIMPLIFICATION: Show habit completion streaks ONLY, or add a filter for
+     "show only habit activity"
+
+4. REDUCE MODAL OVERHEAD
+   - Instead of modal for adding habit, use inline form on the page
+   - RESULT: Context preserved, less interruption
+
+================================================================================
+6. MISSING POWER FEATURES - "The 4-Month Journey Optimization"
+================================================================================
+
+FOR THE 120-DAY TRANSFORMATION TO ACTUALLY WORK:
+------------------------------------------------
+
+1. WEEKLY REFLECTION TEMPLATE
+   - Add a "Weekly Retrospective" section that appears every Sunday
+   - Prompts: "Did you hit your 3 big rocks? Why/why not? Learnings?"
+   - Feeds into next week's planning
+   - File to add: /components/control/WeeklyRetrospectiveModal.jsx
+
+2. HABIT STACK INSIGHTS
+   - Show "most difficult habit" vs "easiest habit"
+   - Suggest: "Your running habit has a 90% completion rate; try adding a
+     second morning habit"
+   - File: Extend HabitCard.jsx with "recommendation" section
+
+3. VALUES → ACTIONS BRIDGE
+   - User creates value: "Family First"
+   - App suggests: "Create a dinner ritual? Schedule weekly family meeting
+     time?"
+   - Interface: Prompt after value creation
+   - File: Add /components/values/ValueSuggestions.jsx
+
+4. MILESTONE COUNTDOWN
+   - Vision layer shows milestones but no time awareness
+   - Add: "Target date: Jan 31. Days remaining: 15. Pace needed:
+     2 milestones/week"
+   - File: Extend AddMilestoneModal.jsx to show pacing
+
+5. DAILY-TO-WEEKLY ROLLUP
+   - Each daily plan is isolated; no rollup to weekly insights
+   - Add: Friday shows "This week: completed X/21 priorities, X/14 time blocks"
+   - File: Add /components/control/WeeklyRollupView.jsx
+
+6. STREAK LEADERBOARD (SELF)
+   - Show "current streaks" for each habit in a dashboard widget
+   - File: Add /components/dashboard/StreakWidget.jsx
+
+7. AUTOMATIONS THAT ACTUALLY WORK
+   - Tab exists but has no content
+   - Could include: "Auto-create Monday daily plan from weekly theme",
+     "Auto-mark completed if all sub-tasks done"
+   - File: Implement /components/control/AutomationsView.jsx fully
+
+8. EXPORT JOURNEY AS PDF
+   - User can download 4-month progress report
+   - File: Add /lib/exportPDF.js + new endpoint
+
+9. SYNC HOUSEHOLD SYSTEMS TO DB
+   - Currently localStorage-only; sync to household_systems table (doesn't
+     exist)
+   - File: Extend /components/control/HouseholdSystemsView.jsx + schema
+
+10. "SKIP DAY" TRACKING
+    - Habits broken = streak is 0; but what about the user who skipped
+      intentionally?
+    - Add "skip" option that preserves streak
+    - File: Extend completion logic to include skip status
+
+11. REMARKABLE LIFE SCOREBOARD
+    - Vision layer's 6 categories (career, family, health, creativity,
+      community, lifestyle)
+    - Dashboard shows: "Health: 2/5 milestones. Career: 3/7 milestones."
+    - File: Add /components/dashboard/VisionScorecard.jsx
+
+12. AI-POWERED INSIGHTS (FUTURE)
+    - "Your recent reflections mention 'time management' frequently. Consider
+      adding a time-blocking ritual."
+    - "You haven't completed your 'Family First' ritual in 2 weeks. What's
+      blocking you?"
+    - This requires backend; file: /api/insights.js (future)
+
+================================================================================
+SUMMARY TABLE
+================================================================================
+
+Category                  | Grade | Key Issues
+-------------------------|-------|-------------------------------------------
+Navigation Flow          | B-    | Layers can be accessed out of order; no
+                         |       | enforcement of 4-month journey sequence.
+                         |       | Household Systems unsync'd. Automations
+                         |       | tab empty.
+                         |       |
+Redundancies             | B     | 15+ empty state patterns. Weekly/Daily
+                         |       | planner 95% duplicate. Date functions
+                         |       | repeated. Habit/Ritual shown in 2-3
+                         |       | places.
+                         |       |
+Frustrations             | C+    | No save feedback. Unclear completion
+                         |       | states. No unsaved-change warnings.
+                         |       | Ambiguous "current layer" meaning. Modal
+                         |       | persistence lost.
+                         |       |
+Unmet Expectations       | C     | No cross-layer connections. No weekly
+                         |       | review template. No mobile support. No
+                         |       | notifications. No undo. No templating.
+                         |       | No bulk ops.
+                         |       |
+Elegance Opportunities   | A-    | Code refactoring very achievable.
+                         |       | Dashboard could be 50% smaller. Modals
+                         |       | could be 80% template-driven.
+                         |       | Calculations centralized.
+                         |       |
+Missing Power Features   | B+    | Weekly retrospective, habit insights,
+                         |       | values→actions bridge, milestone pacing,
+                         |       | daily→weekly rollup, PDF export are all
+                         |       | high-value.
+
+================================================================================
+RECOMMENDED PRIORITY - PHASED APPROACH
+================================================================================
+
+PHASE 1: FIX CRITICAL BUGS (1-2 HOURS)
+--------------------------------------
+1. Sync Household Systems to database instead of localStorage
+2. Hide Automations tab until we build it
+3. Add save success toasts to all forms
+4. Add Escape key to dismiss modals
+
+PHASE 2: REDUCE FRICTION (2-3 HOURS)
+------------------------------------
+5. Journey guidance system - Badge/prompt showing "Next: Complete Discipline
+   layer before Values"
+6. Consolidate Weekly/Daily planner - Create shared PlannerView component
+7. Add "unsaved changes" warning when navigating away from forms
+8. Mobile-responsive sidebar - Collapse to hamburger on small screens
+
+PHASE 3: POWER FEATURES (3-4 HOURS)
+-----------------------------------
+9. Cross-layer connections:
+   - Link habits to values
+   - Show rituals in daily plans
+   - Link milestones to habits for auto-tracking
+10. Weekly retrospective modal - Appears every Sunday with reflection prompts
+11. Streak widget on Dashboard - Show current/longest streaks for habits
+12. Milestone pacing indicator - Show "days remaining" and "pace needed"
+
+PHASE 4: CODE ELEGANCE (2-3 HOURS)
+----------------------------------
+13. Centralize date utilities - Move all to /lib/calculations.js
+14. Template-based FormModal - Replace 5 modals with 1 configurable component
+15. useData hook - Wrapper for Supabase queries with error handling
+16. Consolidate empty states - Single shared component
+
+================================================================================
+IF YOU ONLY HAVE TIME FOR 3 CHANGES:
+================================================================================
+
+1. JOURNEY GUIDANCE (#5)
+   Most important for app's purpose. Without it, users don't follow Cal
+   Newport's method correctly.
+
+2. CROSS-LAYER CONNECTIONS (#9)
+   Makes the app truly powerful. Links habits → values → plans → milestones
+   into one cohesive system.
+
+3. WEEKLY RETROSPECTIVE (#10)
+   Cal Newport emphasizes weekly review. This is the missing piece for actual
+   behavior change.
+
+================================================================================
+SPECIFIC FILE RECOMMENDATIONS
+================================================================================
+
+HIGH IMPACT REFACTORS (3-5 HOURS EACH):
+---------------------------------------
+1. /lib/calculations.js - Centralize all date/progress math
+2. /components/shared/FormModal.jsx - Template for all add/edit modals
+3. /hooks/useData.js - Wrapper for Supabase queries + error handling
+4. /lib/colors.js - Centralized color/category system
+
+NEW COMPONENTS (2-3 HOURS EACH):
+--------------------------------
+1. /components/dashboard/StreakWidget.jsx - Show habit streaks
+2. /components/control/WeeklyRetrospectiveModal.jsx - Reflection template
+3. /components/vision/VisionScorecard.jsx - 6-category breakdown
+4. /components/values/ValueSuggestions.jsx - Habits/rituals from values
+
+QUICK WINS (1 HOUR EACH):
+-------------------------
+1. Add Escape key dismissal to modals
+2. Add success toasts to save operations
+3. Implement "skip day" for habits
+4. Hide/show Automations tab pending implementation
+5. Sync Household Systems to DB instead of localStorage
+
+================================================================================
+CONCLUSION
+================================================================================
+
+This app has solid fundamentals but needs strategic simplification and a few
+missing power features to truly support the 4-month transformation journey.
+
+The code is well-structured and maintainable. The biggest opportunities are:
+1. Enforcing the pedagogical sequence (Discipline → Values → Control → Vision)
+2. Creating visible connections between layers (habits ↔ values ↔ plans)
+3. Adding weekly reflection as the keystone of behavior change
+4. Reducing code duplication through better abstractions
+
+The user experience is good but can be great with:
+1. Clear guidance on what to do next
+2. Feedback that actions succeeded
+3. Mobile support for on-the-go tracking
+4. Power features that make the journey more effective
+
+================================================================================
+END OF FEEDBACK
+================================================================================
