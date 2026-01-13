@@ -217,83 +217,6 @@ export default function Dashboard() {
     }
   }
 
-  const isRitualCompleted = (ritual) => {
-    const today = getLocalDateString(new Date())
-    if (ritual.frequency === 'daily') {
-      return ritual.ritual_completions?.some(c =>
-        c.date === today && c.completed
-      )
-    } else if (ritual.frequency === 'weekly') {
-      const weekStart = getWeekStart(new Date())
-      return ritual.ritual_completions?.some(c => {
-        const completionWeekStart = getWeekStart(new Date(c.date))
-        return completionWeekStart === weekStart && c.completed
-      })
-    }
-    return false
-  }
-
-  const handleToggleRitual = async (ritualId) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const today = getLocalDateString(new Date())
-      const ritual = rituals.find(r => r.id === ritualId)
-
-      if (ritual.frequency === 'daily') {
-        const { data: existing } = await supabase
-          .from('ritual_completions')
-          .select('*')
-          .eq('ritual_id', ritualId)
-          .eq('date', today)
-          .single()
-
-        if (existing) {
-          await supabase
-            .from('ritual_completions')
-            .update({ completed: !existing.completed })
-            .eq('id', existing.id)
-        } else {
-          await supabase
-            .from('ritual_completions')
-            .insert({
-              ritual_id: ritualId,
-              user_id: user.id,
-              date: today,
-              completed: true,
-            })
-        }
-      } else if (ritual.frequency === 'weekly') {
-        const weekStart = getWeekStart(new Date())
-        const { data: existing } = await supabase
-          .from('ritual_completions')
-          .select('*')
-          .eq('ritual_id', ritualId)
-          .gte('date', weekStart)
-          .single()
-
-        if (existing) {
-          await supabase
-            .from('ritual_completions')
-            .update({ completed: !existing.completed })
-            .eq('id', existing.id)
-        } else {
-          await supabase
-            .from('ritual_completions')
-            .insert({
-              ritual_id: ritualId,
-              user_id: user.id,
-              date: today,
-              completed: true,
-            })
-        }
-      }
-
-      await loadData()
-    } catch (error) {
-      console.error('Error toggling ritual:', error)
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -413,7 +336,6 @@ export default function Dashboard() {
                 {rituals.length > 0 ? (
                   <div className="space-y-3">
                     {rituals.map((ritual) => {
-                      const completed = isRitualCompleted(ritual)
                       const isDaily = ritual.frequency === 'daily'
                       return (
                         <div
@@ -422,16 +344,6 @@ export default function Dashboard() {
                             isDaily ? 'bg-cream-100' : 'bg-cream-100 border-l-2 border-values-primary/30'
                           }`}
                         >
-                          <button
-                            onClick={() => handleToggleRitual(ritual.id)}
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all hover:scale-110 flex-shrink-0 ${
-                              completed
-                                ? 'border-values-primary bg-values-primary text-white'
-                                : 'border-cream-300'
-                            }`}
-                          >
-                            {completed && '✓'}
-                          </button>
                           <Link to="/values" className="font-medium text-ink flex-1 hover:underline text-sm">
                             {ritual.name}
                           </Link>
