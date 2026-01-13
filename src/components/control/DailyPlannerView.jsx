@@ -20,6 +20,12 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
     return `${year}-${month}-${day}`
   }
 
+  // Parse a YYYY-MM-DD string as a local date (not UTC)
+  function parseLocalDate(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    return new Date(year, month - 1, day) // month is 0-indexed in JS Date
+  }
+
   function formatDate(date) {
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -125,7 +131,7 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
   }
 
   const jumpToDate = (dateStr) => {
-    setCurrentDate(new Date(dateStr))
+    setCurrentDate(parseLocalDate(dateStr))
     setShowPlanList(false)
   }
 
@@ -336,7 +342,7 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
           {showPlanList && (
             <div className="mt-4 space-y-2 max-h-96 overflow-y-auto">
               {dailyPlans.map((plan) => {
-                const planDate = new Date(plan.date)
+                const planDate = parseLocalDate(plan.date)
                 const isCurrent = plan.date === getLocalDateString(currentDate)
                 const isPlanToday = plan.date === getLocalDateString(new Date())
 

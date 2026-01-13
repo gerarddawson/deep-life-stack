@@ -18,6 +18,20 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
     return new Date(d.setDate(diff))
   }
 
+  // Get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
+  function getLocalDateString(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  // Parse a YYYY-MM-DD string as a local date (not UTC)
+  function parseLocalDate(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    return new Date(year, month - 1, day) // month is 0-indexed in JS Date
+  }
+
   function formatWeekRange(weekStart) {
     const start = new Date(weekStart)
     const end = new Date(weekStart)
@@ -32,7 +46,7 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
   }, [currentWeekStart, weeklyPlans])
 
   const loadWeekPlan = () => {
-    const weekStartStr = currentWeekStart.toISOString().split('T')[0]
+    const weekStartStr = getLocalDateString(currentWeekStart)
     const plan = weeklyPlans.find(p => p.week_start === weekStartStr)
 
     if (plan) {
@@ -52,7 +66,7 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const weekStartStr = currentWeekStart.toISOString().split('T')[0]
+      const weekStartStr = getLocalDateString(currentWeekStart)
 
       // Filter out empty big rocks
       const filteredBigRocks = bigRocks.filter(rock => rock.trim() !== '')
@@ -109,7 +123,7 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
   }
 
   const jumpToWeek = (weekStart) => {
-    setCurrentWeekStart(new Date(weekStart))
+    setCurrentWeekStart(parseLocalDate(weekStart))
     setShowPlanList(false)
   }
 
@@ -130,7 +144,7 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
               {formatWeekRange(currentWeekStart)}
             </h3>
             <p className="text-sm text-gray-500">
-              {currentWeekStart.toISOString().split('T')[0] === getMonday(new Date()).toISOString().split('T')[0]
+              {getLocalDateString(currentWeekStart) === getLocalDateString(getMonday(new Date()))
                 ? 'Current Week'
                 : currentWeekStart > new Date()
                 ? 'Future Week'
@@ -292,7 +306,7 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
                   key={plan.id}
                   onClick={() => jumpToWeek(plan.week_start)}
                   className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                    plan.week_start === currentWeekStart.toISOString().split('T')[0]
+                    plan.week_start === getLocalDateString(currentWeekStart)
                       ? 'border-control-primary bg-control-primary/10'
                       : 'border-gray-200 hover:border-control-primary/50 hover:bg-gray-50'
                   }`}
@@ -300,7 +314,7 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="text-sm font-medium text-gray-900 mb-1">
-                        {formatWeekRange(new Date(plan.week_start))}
+                        {formatWeekRange(parseLocalDate(plan.week_start))}
                       </div>
                       {plan.theme && (
                         <div className="text-sm text-gray-600 mb-2">{plan.theme}</div>
@@ -311,7 +325,7 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
                         </div>
                       )}
                     </div>
-                    {plan.week_start === getMonday(new Date()).toISOString().split('T')[0] && (
+                    {plan.week_start === getLocalDateString(getMonday(new Date())) && (
                       <span className="text-xs px-2 py-1 rounded-full bg-control-primary text-white">
                         Current
                       </span>
