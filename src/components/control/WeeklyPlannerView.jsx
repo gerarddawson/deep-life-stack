@@ -8,6 +8,7 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
   const [saving, setSaving] = useState(false)
   const [currentPlan, setCurrentPlan] = useState(null)
   const [showPlanList, setShowPlanList] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
 
   // Get Monday of current week
   function getMonday(date) {
@@ -37,11 +38,13 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
     if (plan) {
       setCurrentPlan(plan)
       setTheme(plan.theme || '')
-      setBigRocks(plan.big_rocks || ['', '', ''])
+      setBigRocks(plan.big_rocks?.length > 0 ? plan.big_rocks : ['', '', ''])
+      setIsEditing(false) // View mode for saved plans
     } else {
       setCurrentPlan(null)
       setTheme('')
       setBigRocks(['', '', ''])
+      setIsEditing(true) // Edit mode for new plans
     }
   }
 
@@ -66,11 +69,21 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
       if (error) throw error
 
       await onUpdate()
+      setIsEditing(false) // Return to view mode after saving
     } catch (error) {
       console.error('Error saving weekly plan:', error)
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleCancel = () => {
+    if (currentPlan) {
+      // Revert to saved values
+      setTheme(currentPlan.theme || '')
+      setBigRocks(currentPlan.big_rocks?.length > 0 ? currentPlan.big_rocks : ['', '', ''])
+    }
+    setIsEditing(false)
   }
 
   const navigateWeek = (direction) => {
@@ -102,16 +115,164 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
 
   return (
     <div className="space-y-6">
-      {/* Info Card */}
-      <div className="card p-6 bg-gradient-to-br from-control-primary/10 to-control-accent/10 border border-control-primary/20">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Weekly Planning</h3>
-        <p className="text-gray-600">
-          Set a theme for your week and identify 3-5 "big rocks" - the most important things you
-          want to accomplish this week.
-        </p>
+      {/* Week Navigation */}
+      <div className="card p-6">
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => navigateWeek(-1)}
+            className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+          >
+            ←
+          </button>
+
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-gray-900">
+              {formatWeekRange(currentWeekStart)}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {currentWeekStart.toISOString().split('T')[0] === getMonday(new Date()).toISOString().split('T')[0]
+                ? 'Current Week'
+                : currentWeekStart > new Date()
+                ? 'Future Week'
+                : 'Past Week'}
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigateWeek(1)}
+            className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+          >
+            →
+          </button>
+        </div>
+
+        {/* View Mode */}
+        {!isEditing && currentPlan ? (
+          <>
+            {/* Weekly Theme - View Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Weekly Theme
+              </label>
+              {currentPlan.theme ? (
+                <p className="text-gray-900 bg-gray-50 p-4 rounded-xl">
+                  {currentPlan.theme}
+                </p>
+              ) : (
+                <p className="text-gray-500 italic">No theme set</p>
+              )}
+            </div>
+
+            {/* Big Rocks - View Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Big Rocks
+              </label>
+              <div className="space-y-2">
+                {currentPlan.big_rocks && currentPlan.big_rocks.length > 0 ? (
+                  currentPlan.big_rocks.map((rock, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-control-primary text-white flex items-center justify-center font-bold">
+                        {index + 1}
+                      </div>
+                      <span className="text-gray-900">{rock}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 italic">No big rocks set</p>
+                )}
+              </div>
+            </div>
+
+            {/* Edit Button */}
+            <button
+              onClick={() => setIsEditing(true)}
+              className="w-full py-4 border-2 border-control-primary text-control-primary rounded-xl font-medium text-lg hover:bg-control-primary/10 transition-colors"
+            >
+              Edit Plan
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Weekly Theme - Edit Mode */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Weekly Theme
+              </label>
+              <input
+                type="text"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                placeholder="e.g., Focus on health, Family first, Ship the project"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition text-gray-900"
+              />
+            </div>
+
+            {/* Big Rocks - Edit Mode */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Big Rocks (3-5 priorities)
+                </label>
+                {bigRocks.length < 5 && (
+                  <button
+                    onClick={addBigRock}
+                    className="text-sm text-control-primary hover:text-control-accent font-medium"
+                  >
+                    + Add Rock
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {bigRocks.map((rock, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-control-primary text-white flex items-center justify-center font-bold">
+                      {index + 1}
+                    </div>
+                    <input
+                      type="text"
+                      value={rock}
+                      onChange={(e) => updateBigRock(index, e.target.value)}
+                      placeholder={`Priority ${index + 1}`}
+                      className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition text-gray-900"
+                    />
+                    {bigRocks.length > 3 && (
+                      <button
+                        onClick={() => removeBigRock(index)}
+                        className="w-8 h-8 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors text-red-600"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Save and Cancel Buttons */}
+            <div className="flex gap-3">
+              {currentPlan && (
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium text-lg hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-4 gradient-control text-white rounded-xl font-medium text-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {saving ? 'Saving...' : 'Save Weekly Plan'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Quick Access to Past Plans */}
+      {/* All Weekly Plans */}
       {weeklyPlans.length > 0 && (
         <div className="card p-4">
           <button
@@ -162,103 +323,6 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
           )}
         </div>
       )}
-
-      {/* Week Navigation */}
-      <div className="card p-6">
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => navigateWeek(-1)}
-            className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-          >
-            ←
-          </button>
-
-          <div className="text-center">
-            <h3 className="text-2xl font-bold text-gray-900">
-              {formatWeekRange(currentWeekStart)}
-            </h3>
-            <p className="text-sm text-gray-500">
-              {currentWeekStart.toISOString().split('T')[0] === getMonday(new Date()).toISOString().split('T')[0]
-                ? 'Current Week'
-                : currentWeekStart > new Date()
-                ? 'Future Week'
-                : 'Past Week'}
-            </p>
-          </div>
-
-          <button
-            onClick={() => navigateWeek(1)}
-            className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-          >
-            →
-          </button>
-        </div>
-
-        {/* Weekly Theme */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Weekly Theme
-          </label>
-          <input
-            type="text"
-            value={theme}
-            onChange={(e) => setTheme(e.target.value)}
-            placeholder="e.g., Focus on health, Family first, Ship the project"
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition text-gray-900"
-          />
-        </div>
-
-        {/* Big Rocks */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <label className="block text-sm font-medium text-gray-700">
-              Big Rocks (3-5 priorities)
-            </label>
-            {bigRocks.length < 5 && (
-              <button
-                onClick={addBigRock}
-                className="text-sm text-control-primary hover:text-control-accent font-medium"
-              >
-                + Add Rock
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            {bigRocks.map((rock, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-control-primary text-white flex items-center justify-center font-bold">
-                  {index + 1}
-                </div>
-                <input
-                  type="text"
-                  value={rock}
-                  onChange={(e) => updateBigRock(index, e.target.value)}
-                  placeholder={`Priority ${index + 1}`}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition text-gray-900"
-                />
-                {bigRocks.length > 3 && (
-                  <button
-                    onClick={() => removeBigRock(index)}
-                    className="w-8 h-8 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors text-red-600"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full py-4 gradient-control text-white rounded-xl font-medium text-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-        >
-          {saving ? 'Saving...' : 'Save Weekly Plan'}
-        </button>
-      </div>
     </div>
   )
 }
