@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import WeeklyPlannerView from './WeeklyPlannerView'
 import DailyPlannerView from './DailyPlannerView'
@@ -6,7 +7,9 @@ import HouseholdSystemsView from './HouseholdSystemsView'
 import AutomationsView from './AutomationsView'
 
 export default function ControlLayer() {
-  const [activeTab, setActiveTab] = useState('weekly') // 'weekly', 'daily', 'household', 'automations'
+  const [searchParams] = useSearchParams()
+  const initialTab = searchParams.get('tab') || 'weekly'
+  const [activeTab, setActiveTab] = useState(initialTab) // 'weekly', 'daily', 'household', 'automations'
   const [loading, setLoading] = useState(true)
   const [weeklyPlans, setWeeklyPlans] = useState([])
   const [dailyPlans, setDailyPlans] = useState([])
@@ -19,28 +22,22 @@ export default function ControlLayer() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
-      // Load weekly plans
-      const { data: weeklyData } = await supabase
-        .from('weekly_plans')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('week_start', { ascending: false })
+      // Load all weekly and daily plans in parallel
+      const [weeklyResult, dailyResult] = await Promise.all([
+        supabase
+          .from('weekly_plans')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('week_start', { ascending: false }),
+        supabase
+          .from('daily_plans')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+      ])
 
-      setWeeklyPlans(weeklyData || [])
-
-      // Load daily plans for current week
-      const today = new Date()
-      const weekStart = new Date(today)
-      weekStart.setDate(today.getDate() - today.getDay())
-
-      const { data: dailyData } = await supabase
-        .from('daily_plans')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('date', weekStart.toISOString().split('T')[0])
-        .order('date', { ascending: true })
-
-      setDailyPlans(dailyData || [])
+      setWeeklyPlans(weeklyResult.data || [])
+      setDailyPlans(dailyResult.data || [])
     } catch (error) {
       console.error('Error loading control data:', error)
     } finally {

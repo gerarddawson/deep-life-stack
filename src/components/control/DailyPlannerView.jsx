@@ -12,6 +12,14 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
   const [showPlanList, setShowPlanList] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
 
+  // Get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
+  function getLocalDateString(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   function formatDate(date) {
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -31,7 +39,7 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
   }, [currentDate, dailyPlans])
 
   const loadDailyPlan = () => {
-    const dateStr = currentDate.toISOString().split('T')[0]
+    const dateStr = getLocalDateString(currentDate)
     const plan = dailyPlans.find(p => p.date === dateStr)
 
     if (plan) {
@@ -55,7 +63,7 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const dateStr = currentDate.toISOString().split('T')[0]
+      const dateStr = getLocalDateString(currentDate)
 
       // Filter out empty priorities
       const filteredPriorities = topPriorities.filter(p => p.trim() !== '')
@@ -329,8 +337,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
             <div className="mt-4 space-y-2 max-h-96 overflow-y-auto">
               {dailyPlans.map((plan) => {
                 const planDate = new Date(plan.date)
-                const isCurrent = plan.date === currentDate.toISOString().split('T')[0]
-                const isPlanToday = plan.date === new Date().toISOString().split('T')[0]
+                const isCurrent = plan.date === getLocalDateString(currentDate)
+                const isPlanToday = plan.date === getLocalDateString(new Date())
 
                 return (
                   <div

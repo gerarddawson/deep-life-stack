@@ -449,7 +449,7 @@ export default function Dashboard() {
               <div className="pt-4 border-t border-cream-200 flex flex-wrap gap-3">
                 {dailyPlan && (
                   <Link
-                    to="/control"
+                    to="/control?tab=daily"
                     className="text-sm text-control-primary hover:underline font-medium"
                   >
                     View today's plan →
@@ -457,7 +457,7 @@ export default function Dashboard() {
                 )}
                 {weeklyPlan && (
                   <Link
-                    to="/control"
+                    to="/control?tab=weekly"
                     className="text-sm text-control-primary hover:underline font-medium"
                   >
                     Review weekly plan →
