@@ -163,6 +163,47 @@ The app uses Supabase (PostgreSQL) with the following tables:
 - `remarkable_aspects` - Life goals across 6 categories with status tracking
 - `milestones` - Sequential milestones for each aspect
 
+## Development Notes
+
+### Architecture Patterns
+
+**View/Edit Mode Pattern** (used in DailyPlannerView, WeeklyPlannerView):
+- Saved plans display in read-only "view mode" with styled text
+- "Edit" button switches to edit mode with form inputs
+- "Save" returns to view mode; "Cancel" reverts changes
+- New plans (no existing data) start directly in edit mode
+- State managed via `isEditing` boolean and `currentPlan` object
+
+**Supabase Upsert Pattern**:
+- All plan saves use `upsert` with `onConflict` to handle both insert and update
+- Example: `{ onConflict: 'user_id,week_start' }` for weekly plans
+- This prevents duplicate key errors when updating existing plans
+
+**Dynamic Form Fields** (DailyPlannerView priorities, TimeBlockingView):
+- Start with minimal fields, allow adding more
+- Daily priorities: start with 1, can add up to 3
+- Time blocks: auto-populate new block's start time from previous block's end time
+
+### Recent Changes (January 2025)
+
+**Control Layer UI Improvements**:
+- Added view/edit mode toggle to both daily and weekly planners
+- Removed redundant info cards at top of planner pages
+- Moved "All Plans" sections to bottom of pages (less priority than current plan)
+- Daily priorities now start with 1 field (can add up to 3) instead of always showing 3
+- Time blocks auto-populate start time from previous block's end time (+1 hour duration)
+
+**Bug Fixes**:
+- Fixed upsert conflict errors by adding `onConflict` option to weekly_plans, daily_plans, and personal_code saves
+- Fixed top 3 priorities not showing for today's date
+- Fixed ritual loading by fetching completions separately
+
+### Key Files for Control Layer
+- `src/components/control/DailyPlannerView.jsx` - Daily planning with priorities, time blocks, reflection
+- `src/components/control/WeeklyPlannerView.jsx` - Weekly planning with theme and big rocks
+- `src/components/control/TimeBlockingView.jsx` - Time block management component
+- `src/components/control/ControlLayer.jsx` - Parent component with tab navigation
+
 ## Troubleshooting
 
 ### "Invalid API key" error
