@@ -18,6 +18,35 @@ export default function TimeBlockingView({ timeBlocks, onChange }) {
     category: 'deep-work'
   })
 
+  // Calculate start/end time for a new block based on last block's end time
+  const getNextBlockTimes = () => {
+    if (timeBlocks.length === 0) {
+      return { start: '09:00', end: '10:00' }
+    }
+    // Sort blocks by start time and get the last one's end time
+    const sortedBlocks = [...timeBlocks].sort((a, b) => a.start.localeCompare(b.start))
+    const lastBlock = sortedBlocks[sortedBlocks.length - 1]
+    const startTime = lastBlock.end
+
+    // Calculate end time (1 hour later)
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const endHours = (hours + 1) % 24
+    const endTime = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+
+    return { start: startTime, end: endTime }
+  }
+
+  const handleShowAddBlock = () => {
+    const { start, end } = getNextBlockTimes()
+    setNewBlock({
+      start,
+      end,
+      title: '',
+      category: 'deep-work'
+    })
+    setShowAddBlock(true)
+  }
+
   const handleAddBlock = () => {
     if (!newBlock.title.trim()) return
 
@@ -54,7 +83,7 @@ export default function TimeBlockingView({ timeBlocks, onChange }) {
         <div className="text-center py-8 text-gray-500">
           <p className="mb-4">No time blocks yet</p>
           <button
-            onClick={() => setShowAddBlock(true)}
+            onClick={handleShowAddBlock}
             className="px-4 py-2 bg-control-primary text-white rounded-lg hover:bg-control-accent transition-colors"
           >
             Add Time Block
@@ -154,7 +183,7 @@ export default function TimeBlockingView({ timeBlocks, onChange }) {
         </div>
       ) : timeBlocks.length > 0 && (
         <button
-          onClick={() => setShowAddBlock(true)}
+          onClick={handleShowAddBlock}
           className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-control-primary hover:text-control-primary transition-colors font-medium"
         >
           + Add Time Block

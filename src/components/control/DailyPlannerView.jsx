@@ -4,7 +4,7 @@ import TimeBlockingView from './TimeBlockingView'
 
 export default function DailyPlannerView({ dailyPlans, onUpdate }) {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [topPriorities, setTopPriorities] = useState(['', '', ''])
+  const [topPriorities, setTopPriorities] = useState([''])
   const [reflection, setReflection] = useState('')
   const [timeBlocks, setTimeBlocks] = useState([])
   const [saving, setSaving] = useState(false)
@@ -36,19 +36,15 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
 
     if (plan) {
       setCurrentPlan(plan)
-      // Ensure we always have exactly 3 priority slots, even if saved with fewer
+      // Load saved priorities, or start with one empty slot if none saved
       const priorities = plan.top_priorities || []
-      setTopPriorities([
-        priorities[0] || '',
-        priorities[1] || '',
-        priorities[2] || ''
-      ])
+      setTopPriorities(priorities.length > 0 ? priorities : [''])
       setReflection(plan.reflection || '')
       setTimeBlocks(plan.time_blocks || [])
       setIsEditing(false) // View mode for saved plans
     } else {
       setCurrentPlan(null)
-      setTopPriorities(['', '', ''])
+      setTopPriorities(['']) // Start with 1 priority slot
       setReflection('')
       setTimeBlocks([])
       setIsEditing(true) // Edit mode for new plans
@@ -89,15 +85,23 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
     if (currentPlan) {
       // Revert to saved values
       const priorities = currentPlan.top_priorities || []
-      setTopPriorities([
-        priorities[0] || '',
-        priorities[1] || '',
-        priorities[2] || ''
-      ])
+      setTopPriorities(priorities.length > 0 ? priorities : [''])
       setReflection(currentPlan.reflection || '')
       setTimeBlocks(currentPlan.time_blocks || [])
     }
     setIsEditing(false)
+  }
+
+  const addPriority = () => {
+    if (topPriorities.length < 3) {
+      setTopPriorities([...topPriorities, ''])
+    }
+  }
+
+  const removePriority = (index) => {
+    if (topPriorities.length > 1) {
+      setTopPriorities(topPriorities.filter((_, i) => i !== index))
+    }
   }
 
   const navigateDay = (direction) => {
@@ -119,72 +123,6 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
 
   return (
     <div className="space-y-6">
-      {/* Info Card */}
-      <div className="card p-6 bg-gradient-to-br from-control-primary/10 to-control-accent/10 border border-control-primary/20">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Daily Planning</h3>
-        <p className="text-gray-600">
-          Plan your day with your top 3 priorities, time blocks for deep work, and end-of-day reflection.
-        </p>
-      </div>
-
-      {/* Quick Access to Past Plans */}
-      {dailyPlans.length > 0 && (
-        <div className="card p-4">
-          <button
-            onClick={() => setShowPlanList(!showPlanList)}
-            className="w-full flex items-center justify-between text-left hover:bg-gray-50 p-2 rounded-lg transition-colors"
-          >
-            <span className="font-medium text-gray-900">
-              All Daily Plans ({dailyPlans.length})
-            </span>
-            <span className="text-gray-500">{showPlanList ? '▼' : '▶'}</span>
-          </button>
-
-          {showPlanList && (
-            <div className="mt-4 space-y-2 max-h-96 overflow-y-auto">
-              {dailyPlans.map((plan) => {
-                const planDate = new Date(plan.date)
-                const isCurrent = plan.date === currentDate.toISOString().split('T')[0]
-                const isPlanToday = plan.date === new Date().toISOString().split('T')[0]
-
-                return (
-                  <div
-                    key={plan.id}
-                    onClick={() => jumpToDate(plan.date)}
-                    className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                      isCurrent
-                        ? 'border-control-primary bg-control-primary/10'
-                        : 'border-gray-200 hover:border-control-primary/50 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900 mb-1">
-                          {formatDate(planDate)}
-                        </div>
-                        {plan.top_priorities && plan.top_priorities.length > 0 && (
-                          <div className="text-xs text-gray-600 mb-1">
-                            {plan.top_priorities.length} priorit{plan.top_priorities.length !== 1 ? 'ies' : 'y'}
-                          </div>
-                        )}
-                        {plan.reflection && (
-                          <div className="text-xs text-gray-500 line-clamp-1">{plan.reflection}</div>
-                        )}
-                      </div>
-                      {isPlanToday && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-control-primary text-white">
-                          Today
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Date Navigation */}
       <div className="card p-6">
         <div className="flex items-center justify-between mb-6">
@@ -215,10 +153,10 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
         {/* View Mode */}
         {!isEditing && currentPlan ? (
           <>
-            {/* Top 3 Priorities - View Mode */}
+            {/* Top Priorities - View Mode */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Top 3 Priorities
+                Top Priorities
               </label>
               <div className="space-y-2">
                 {currentPlan.top_priorities && currentPlan.top_priorities.length > 0 ? (
@@ -286,11 +224,21 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
           </>
         ) : (
           <>
-            {/* Top 3 Priorities - Edit Mode */}
+            {/* Top Priorities - Edit Mode */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Top 3 Priorities
-              </label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Top Priorities
+                </label>
+                {topPriorities.length < 3 && (
+                  <button
+                    onClick={addPriority}
+                    className="text-sm text-control-primary hover:text-control-accent font-medium"
+                  >
+                    + Add Priority
+                  </button>
+                )}
+              </div>
               <div className="space-y-3">
                 {topPriorities.map((priority, index) => (
                   <div key={index} className="flex items-center gap-3">
@@ -304,6 +252,14 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
                       placeholder={`Priority ${index + 1}`}
                       className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition text-gray-900"
                     />
+                    {topPriorities.length > 1 && (
+                      <button
+                        onClick={() => removePriority(index)}
+                        className="w-8 h-8 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors text-red-600"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -355,6 +311,64 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
           </>
         )}
       </div>
+
+      {/* All Daily Plans */}
+      {dailyPlans.length > 0 && (
+        <div className="card p-4">
+          <button
+            onClick={() => setShowPlanList(!showPlanList)}
+            className="w-full flex items-center justify-between text-left hover:bg-gray-50 p-2 rounded-lg transition-colors"
+          >
+            <span className="font-medium text-gray-900">
+              All Daily Plans ({dailyPlans.length})
+            </span>
+            <span className="text-gray-500">{showPlanList ? '▼' : '▶'}</span>
+          </button>
+
+          {showPlanList && (
+            <div className="mt-4 space-y-2 max-h-96 overflow-y-auto">
+              {dailyPlans.map((plan) => {
+                const planDate = new Date(plan.date)
+                const isCurrent = plan.date === currentDate.toISOString().split('T')[0]
+                const isPlanToday = plan.date === new Date().toISOString().split('T')[0]
+
+                return (
+                  <div
+                    key={plan.id}
+                    onClick={() => jumpToDate(plan.date)}
+                    className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'border-control-primary bg-control-primary/10'
+                        : 'border-gray-200 hover:border-control-primary/50 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 mb-1">
+                          {formatDate(planDate)}
+                        </div>
+                        {plan.top_priorities && plan.top_priorities.length > 0 && (
+                          <div className="text-xs text-gray-600 mb-1">
+                            {plan.top_priorities.length} priorit{plan.top_priorities.length !== 1 ? 'ies' : 'y'}
+                          </div>
+                        )}
+                        {plan.reflection && (
+                          <div className="text-xs text-gray-500 line-clamp-1">{plan.reflection}</div>
+                        )}
+                      </div>
+                      {isPlanToday && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-control-primary text-white">
+                          Today
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
