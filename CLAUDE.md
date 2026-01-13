@@ -20,6 +20,17 @@ This is a React web app for Cal Newport's "Deep Life Stack" - a 120-day personal
 - "Edit" button → edit mode; "Save" → view mode; "Cancel" → revert + view mode
 - `currentPlan` holds the saved data for reverting on cancel
 
+### Parallel Data Loading (Dashboard)
+The Dashboard uses `Promise.all()` to run all queries in parallel:
+```javascript
+const [result1, result2, result3] = await Promise.all([
+  supabase.from('table1').select('*').eq('user_id', user.id),
+  supabase.from('table2').select('*').eq('user_id', user.id),
+  supabase.from('table3').select('*').eq('user_id', user.id)
+])
+```
+Derived values (journey start date, current layer, progress) are computed from fetched data, not additional queries.
+
 ### Supabase Upsert
 Always use `onConflict` with upsert to prevent duplicate key errors:
 ```javascript
