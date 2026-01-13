@@ -42,6 +42,41 @@ await supabase.from('weekly_plans').upsert({
 }, { onConflict: 'user_id,week_start' })
 ```
 
+### Timezone-Safe Date Handling (CRITICAL)
+**Never use `toISOString().split('T')[0]`** for date strings. This returns UTC dates which can be off by a day depending on the user's timezone.
+
+Instead, use the `getLocalDateString` helper (defined in each component that needs it):
+```javascript
+function getLocalDateString(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+```
+
+Similarly, when parsing a date string from the database back to a Date object, use:
+```javascript
+function parseLocalDate(dateStr) {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, day) // month is 0-indexed
+}
+```
+
+**Why this matters**: `new Date("2026-01-12")` creates midnight UTC, which in US timezones (UTC-5 to UTC-8) displays as January 11th. This causes:
+- Habits showing as completed on wrong days
+- Daily/weekly plans appearing on wrong dates
+- "Today" badges on wrong items
+
+**Files with timezone-safe date handling**:
+- `src/components/dashboard/Dashboard.jsx`
+- `src/components/discipline/DisciplineLayer.jsx`
+- `src/components/discipline/HabitCard.jsx`
+- `src/components/discipline/HabitCalendar.jsx`
+- `src/components/control/DailyPlannerView.jsx`
+- `src/components/control/WeeklyPlannerView.jsx`
+- `src/lib/calculations.js`
+
 ### Component Data Flow
 Parent components (e.g., `ControlLayer`) fetch data and pass to children via props. Children call `onUpdate()` after saves to trigger parent refetch.
 
@@ -68,7 +103,9 @@ src/components/
 | `src/components/control/TimeBlockingView.jsx` | Time block add/remove component |
 | `src/components/dashboard/Dashboard.jsx` | Main dashboard with activity grid |
 | `src/lib/supabase.js` | Supabase client initialization |
+| `src/lib/calculations.js` | Streak and completion rate calculations |
 | `supabase-schema.sql` | Complete database schema with RLS policies |
+| `vercel.json` | Vercel config for SPA routing (rewrites all routes to index.html) |
 
 ## Database Tables
 
@@ -94,7 +131,7 @@ All tables have Row Level Security - users can only access their own data.
 2. Run `npm run build` to check for build errors before committing
 3. Push to main branch → Vercel auto-deploys
 
-## Current State (January 2025)
+## Current State (January 2026)
 
 All 4 layers are fully implemented:
 - **Discipline**: Habit tracking with streaks and calendar
@@ -102,7 +139,11 @@ All 4 layers are fully implemented:
 - **Control**: Weekly/daily planning with view/edit modes, time blocking
 - **Vision**: Remarkable aspects with milestones and progress tracking
 
-Recent work focused on Control Layer UX improvements (view/edit modes, cleaner UI).
+Recent work:
+- Control Layer UX improvements (view/edit modes, cleaner UI)
+- Fixed timezone bugs across all date handling (see "Timezone-Safe Date Handling" above)
+- Added `vercel.json` for SPA routing (fixes 404 on page refresh)
+- Dashboard performance optimization with parallel queries
 
 ## Areas That May Need Work
 
