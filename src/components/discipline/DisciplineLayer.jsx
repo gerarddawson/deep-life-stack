@@ -147,6 +147,22 @@ export default function DisciplineLayer() {
     }
   }
 
+  const handleDeleteHabit = async (habitId) => {
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .delete()
+        .eq('id', habitId)
+
+      if (error) throw error
+
+      await loadHabits()
+      setEditingHabit(null)
+    } catch (error) {
+      console.error('Error deleting habit:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -304,6 +320,7 @@ export default function DisciplineLayer() {
           onAdd={handleAddHabit}
           editHabit={editingHabit}
           onEdit={handleEditHabit}
+          onDelete={handleDeleteHabit}
           existingCategories={habits.map(h => h.category).filter(Boolean)}
         />
       )}
