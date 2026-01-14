@@ -216,15 +216,17 @@ export default function TimeBlockingView({ timeBlocks, onChange }) {
               <span>{formatTime12Hour(block.end)}</span>
             </div>
 
-            {/* Category Badge */}
-            <div className={`px-3 py-1 ${getCategoryColor(block.category)} text-white text-xs rounded-full font-medium`}>
-              {getCategoryLabel(block.category)}
-            </div>
-
             {/* Title */}
             <div className="flex-1 font-medium text-gray-900">
               {block.title}
             </div>
+
+            {/* Category Badge */}
+            {block.category && (
+              <span className="text-xs px-2 py-1 rounded-full bg-control-primary/20 text-control-primary">
+                {getCategoryLabel(block.category)}
+              </span>
+            )}
 
             {/* Edit indicator */}
             <span className="text-gray-400 text-sm">Click to edit</span>
