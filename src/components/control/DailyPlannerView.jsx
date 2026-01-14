@@ -21,6 +21,9 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false)
   const [shutdownComplete, setShutdownComplete] = useState(null)
   const [shutdownChecks, setShutdownChecks] = useState({})
+  const [weeklyBigRocks, setWeeklyBigRocks] = useState([])
+  const [weeklyTheme, setWeeklyTheme] = useState('')
+  const [showWeeklyContext, setShowWeeklyContext] = useState(true)
 
   // Get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
   function getLocalDateString(date) {
@@ -59,9 +62,48 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
     return date.toDateString() === today.toDateString()
   }
 
+  // Get Monday of the week containing a date
+  function getMonday(date) {
+    const d = new Date(date)
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    return new Date(d.setDate(diff))
+  }
+
+  // Format week range for display
+  function formatWeekRange(weekStart) {
+    const start = new Date(weekStart)
+    const end = new Date(weekStart)
+    end.setDate(end.getDate() + 6)
+    const formatOptions = { month: 'short', day: 'numeric' }
+    return `${start.toLocaleDateString('en-US', formatOptions)} - ${end.toLocaleDateString('en-US', formatOptions)}`
+  }
+
   useEffect(() => {
     loadDailyPlan()
+    loadWeeklyContext()
   }, [currentDate, dailyPlans])
+
+  const loadWeeklyContext = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const weekStart = getLocalDateString(getMonday(currentDate))
+
+      const { data } = await supabase
+        .from('weekly_plans')
+        .select('big_rocks, theme')
+        .eq('user_id', user.id)
+        .eq('week_start', weekStart)
+        .single()
+
+      setWeeklyBigRocks(data?.big_rocks || [])
+      setWeeklyTheme(data?.theme || '')
+    } catch (error) {
+      // No weekly plan found is okay
+      setWeeklyBigRocks([])
+      setWeeklyTheme('')
+    }
+  }
 
   const loadDailyPlan = () => {
     const dateStr = getLocalDateString(currentDate)
@@ -202,6 +244,51 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
 
   return (
     <div className="space-y-6">
+      {/* Weekly Context - Reference from higher planning scale */}
+      <div className="card p-4 bg-blue-50 border-blue-200">
+        <button
+          onClick={() => setShowWeeklyContext(!showWeeklyContext)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-blue-600 font-medium">
+              Week of {formatWeekRange(getMonday(currentDate))}
+            </span>
+            <span className="text-xs text-blue-500">
+              (weekly context)
+            </span>
+          </div>
+          <span className="text-blue-400">{showWeeklyContext ? '▼' : '▶'}</span>
+        </button>
+
+        {showWeeklyContext && (
+          <div className="mt-3 pt-3 border-t border-blue-200">
+            {weeklyTheme && (
+              <p className="text-sm text-blue-700 mb-2">
+                <span className="font-medium">Theme:</span> {weeklyTheme}
+              </p>
+            )}
+            {weeklyBigRocks.length > 0 ? (
+              <>
+                <p className="text-xs text-blue-500 mb-1 font-medium">Big Rocks:</p>
+                <ul className="space-y-1">
+                  {weeklyBigRocks.map((rock, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-blue-800">
+                      <span className="text-blue-400 mt-0.5">•</span>
+                      <span>{rock}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="text-sm text-blue-600 italic">
+                No weekly plan set. <a href="?tab=weekly" className="underline hover:text-blue-800">Create one in Weekly Planning</a>
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Date Navigation */}
       <div className="card p-6">
         <div className="flex items-center justify-between mb-6">

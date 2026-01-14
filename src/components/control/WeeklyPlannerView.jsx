@@ -9,6 +9,8 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
   const [currentPlan, setCurrentPlan] = useState(null)
   const [showPlanList, setShowPlanList] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [quarterlyObjectives, setQuarterlyObjectives] = useState([])
+  const [showQuarterlyContext, setShowQuarterlyContext] = useState(true)
 
   // Get Monday of current week
   function getMonday(date) {
@@ -41,9 +43,42 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
     return `${start.toLocaleDateString('en-US', formatOptions)} - ${end.toLocaleDateString('en-US', formatOptions)}`
   }
 
+  // Get quarter start date for a given date
+  function getQuarterStartDate(date) {
+    const quarter = Math.floor(date.getMonth() / 3)
+    const quarterMonth = quarter * 3
+    return `${date.getFullYear()}-${String(quarterMonth + 1).padStart(2, '0')}-01`
+  }
+
+  // Format quarter for display
+  function formatQuarter(date) {
+    const quarter = Math.floor(date.getMonth() / 3) + 1
+    return `Q${quarter} ${date.getFullYear()}`
+  }
+
   useEffect(() => {
     loadWeekPlan()
+    loadQuarterlyContext()
   }, [currentWeekStart, weeklyPlans])
+
+  const loadQuarterlyContext = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const quarterStart = getQuarterStartDate(currentWeekStart)
+
+      const { data } = await supabase
+        .from('quarterly_plans')
+        .select('objectives')
+        .eq('user_id', user.id)
+        .eq('quarter_start', quarterStart)
+        .single()
+
+      setQuarterlyObjectives(data?.objectives || [])
+    } catch (error) {
+      // No quarterly plan found is okay
+      setQuarterlyObjectives([])
+    }
+  }
 
   const loadWeekPlan = () => {
     const weekStartStr = getLocalDateString(currentWeekStart)
@@ -129,6 +164,43 @@ export default function WeeklyPlannerView({ weeklyPlans, onUpdate }) {
 
   return (
     <div className="space-y-6">
+      {/* Quarterly Context - Reference from higher planning scale */}
+      <div className="card p-4 bg-purple-50 border-purple-200">
+        <button
+          onClick={() => setShowQuarterlyContext(!showQuarterlyContext)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-purple-600 font-medium">
+              {formatQuarter(currentWeekStart)} Objectives
+            </span>
+            <span className="text-xs text-purple-500">
+              (quarterly context)
+            </span>
+          </div>
+          <span className="text-purple-400">{showQuarterlyContext ? '▼' : '▶'}</span>
+        </button>
+
+        {showQuarterlyContext && (
+          <div className="mt-3 pt-3 border-t border-purple-200">
+            {quarterlyObjectives.length > 0 ? (
+              <ul className="space-y-1">
+                {quarterlyObjectives.map((objective, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-purple-800">
+                    <span className="text-purple-400 mt-0.5">•</span>
+                    <span>{objective}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-purple-600 italic">
+                No quarterly objectives set. <a href="?tab=quarterly" className="underline hover:text-purple-800">Create them in Quarterly Planning</a>
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Week Navigation */}
       <div className="card p-6">
         <div className="flex items-center justify-between mb-6">
