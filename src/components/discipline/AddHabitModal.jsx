@@ -1,32 +1,54 @@
 import { useState, useEffect } from 'react'
 
-const availableColors = [
-  '#06B6D4', '#3B82F6', '#8B5CF6', '#EC4899',
-  '#F59E0B', '#10B981', '#EF4444', '#6B7280'
+// Newport's three keystone habit categories
+const habitCategories = [
+  {
+    value: 'body',
+    label: 'Body',
+    description: 'Physical health and wellness',
+    examples: 'Morning walk, Exercise, Stretching, Sleep routine',
+    color: '#10B981' // Green
+  },
+  {
+    value: 'mind',
+    label: 'Mind',
+    description: 'Mental acuity and learning',
+    examples: 'Daily reading, Journaling, Learning a skill, Meditation',
+    color: '#3B82F6' // Blue
+  },
+  {
+    value: 'heart',
+    label: 'Heart',
+    description: 'Emotional connection and relationships',
+    examples: 'Family dinner, Call a friend, Quality time, Acts of kindness',
+    color: '#EC4899' // Pink
+  }
 ]
 
-export default function AddHabitModal({ onClose, onAdd, editHabit = null, onEdit = null }) {
+export default function AddHabitModal({ onClose, onAdd, editHabit = null, onEdit = null, existingCategories = [] }) {
   const isEditMode = editHabit !== null
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [selectedColor, setSelectedColor] = useState(availableColors[0])
+  const [selectedCategory, setSelectedCategory] = useState('')
 
   // Initialize form with existing habit data if editing
   useEffect(() => {
     if (editHabit) {
       setName(editHabit.name || '')
       setDescription(editHabit.description || '')
-      setSelectedColor(editHabit.color || availableColors[0])
+      setSelectedCategory(editHabit.category || '')
     }
   }, [editHabit])
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const categoryData = habitCategories.find(c => c.value === selectedCategory)
     const habitData = {
       name,
       description: description || null,
       icon: '',
-      color: selectedColor,
+      color: categoryData?.color || '#06B6D4',
+      category: selectedCategory,
     }
 
     if (isEditMode && onEdit) {
@@ -82,34 +104,61 @@ export default function AddHabitModal({ onClose, onAdd, editHabit = null, onEdit
             />
           </div>
 
-          {/* Color Selector */}
+          {/* Category Selector - Body/Mind/Heart */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              Choose a Color
+              Choose a Category
             </label>
-            <div className="grid grid-cols-8 gap-3">
-              {availableColors.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setSelectedColor(color)}
-                  className={`
-                    w-12 h-12 rounded-xl transition-all
-                    ${selectedColor === color
-                      ? 'ring-4 ring-offset-2 ring-gray-900 scale-110'
-                      : 'hover:scale-105'
-                    }
-                  `}
-                  style={{ backgroundColor: color }}
-                />
-              ))}
+            <p className="text-sm text-gray-500 mb-4">
+              Cal Newport recommends one keystone habit in each area: Body, Mind, and Heart.
+            </p>
+            <div className="grid grid-cols-1 gap-3">
+              {habitCategories.map((category) => {
+                const isSelected = selectedCategory === category.value
+                const isUsed = existingCategories.includes(category.value) && (!editHabit || editHabit.category !== category.value)
+
+                return (
+                  <button
+                    key={category.value}
+                    type="button"
+                    onClick={() => !isUsed && setSelectedCategory(category.value)}
+                    disabled={isUsed}
+                    className={`
+                      p-4 rounded-xl border-2 text-left transition-all
+                      ${isSelected
+                        ? 'border-gray-900 ring-2 ring-gray-900 ring-offset-2'
+                        : isUsed
+                          ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                          : 'border-gray-200 hover:border-gray-400'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                        style={{ backgroundColor: category.color }}
+                      >
+                        {category.label[0]}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 flex items-center gap-2">
+                          {category.label}
+                          {isUsed && <span className="text-xs text-gray-500">(already have one)</span>}
+                        </div>
+                        <div className="text-sm text-gray-500">{category.description}</div>
+                        <div className="text-xs text-gray-400 mt-1">e.g., {category.examples}</div>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={!name}
+            disabled={!name || !selectedCategory}
             className="w-full py-4 gradient-discipline text-white rounded-xl font-medium text-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             {isEditMode ? 'Save Changes' : 'Create Habit'}

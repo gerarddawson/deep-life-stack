@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import QuarterlyPlannerView from './QuarterlyPlannerView'
 import WeeklyPlannerView from './WeeklyPlannerView'
 import DailyPlannerView from './DailyPlannerView'
-import HouseholdSystemsView from './HouseholdSystemsView'
-import AutomationsView from './AutomationsView'
 
 export default function ControlLayer() {
   const [searchParams] = useSearchParams()
-  const initialTab = searchParams.get('tab') || 'weekly'
-  const [activeTab, setActiveTab] = useState(initialTab) // 'weekly', 'daily', 'household', 'automations'
+  const initialTab = searchParams.get('tab') || 'quarterly'
+  const [activeTab, setActiveTab] = useState(initialTab) // 'quarterly', 'weekly', 'daily'
   const [loading, setLoading] = useState(true)
   const [weeklyPlans, setWeeklyPlans] = useState([])
   const [dailyPlans, setDailyPlans] = useState([])
@@ -71,8 +70,21 @@ export default function ControlLayer() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation - Multi-Scale Planning: Quarterly → Weekly → Daily */}
       <div className="flex gap-2 mb-8 border-b border-cream-300">
+        <button
+          onClick={() => setActiveTab('quarterly')}
+          className={`px-6 py-3 font-medium transition-colors relative cursor-pointer ${
+            activeTab === 'quarterly'
+              ? 'text-control-primary'
+              : 'text-ink-light hover:text-ink'
+          }`}
+        >
+          Quarterly
+          {activeTab === 'quarterly' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 gradient-control"></div>
+          )}
+        </button>
         <button
           onClick={() => setActiveTab('weekly')}
           className={`px-6 py-3 font-medium transition-colors relative cursor-pointer ${
@@ -81,7 +93,7 @@ export default function ControlLayer() {
               : 'text-ink-light hover:text-ink'
           }`}
         >
-          Weekly Planning
+          Weekly
           {activeTab === 'weekly' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 gradient-control"></div>
           )}
@@ -94,34 +106,8 @@ export default function ControlLayer() {
               : 'text-ink-light hover:text-ink'
           }`}
         >
-          Daily Planning
+          Daily
           {activeTab === 'daily' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 gradient-control"></div>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('household')}
-          className={`px-6 py-3 font-medium transition-colors relative cursor-pointer ${
-            activeTab === 'household'
-              ? 'text-control-primary'
-              : 'text-ink-light hover:text-ink'
-          }`}
-        >
-          Household Systems
-          {activeTab === 'household' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 gradient-control"></div>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('automations')}
-          className={`px-6 py-3 font-medium transition-colors relative cursor-pointer ${
-            activeTab === 'automations'
-              ? 'text-control-primary'
-              : 'text-ink-light hover:text-ink'
-          }`}
-        >
-          Automations
-          {activeTab === 'automations' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 gradient-control"></div>
           )}
         </button>
@@ -129,6 +115,9 @@ export default function ControlLayer() {
 
       {/* Tab Content */}
       <div>
+        {activeTab === 'quarterly' && (
+          <QuarterlyPlannerView onUpdate={loadControlData} />
+        )}
         {activeTab === 'weekly' && (
           <WeeklyPlannerView
             weeklyPlans={weeklyPlans}
@@ -140,12 +129,6 @@ export default function ControlLayer() {
             dailyPlans={dailyPlans}
             onUpdate={loadControlData}
           />
-        )}
-        {activeTab === 'household' && (
-          <HouseholdSystemsView onUpdate={loadControlData} />
-        )}
-        {activeTab === 'automations' && (
-          <AutomationsView onUpdate={loadControlData} />
         )}
       </div>
     </div>

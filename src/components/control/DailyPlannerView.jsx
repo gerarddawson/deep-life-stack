@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import TimeBlockingView from './TimeBlockingView'
 
+// Cal Newport's Shutdown Ritual checklist items
+const shutdownChecklist = [
+  { id: 'inbox', label: 'Review inbox and capture any tasks' },
+  { id: 'calendar', label: 'Check calendar for upcoming commitments' },
+  { id: 'tomorrow', label: 'Create or review tomorrow\'s plan' },
+  { id: 'open_loops', label: 'Confirm no urgent open loops' },
+]
+
 export default function DailyPlannerView({ dailyPlans, onUpdate }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [topPriorities, setTopPriorities] = useState([''])
@@ -11,6 +19,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
   const [currentPlan, setCurrentPlan] = useState(null)
   const [showPlanList, setShowPlanList] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [shutdownComplete, setShutdownComplete] = useState(null)
+  const [shutdownChecks, setShutdownChecks] = useState({})
 
   // Get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
   function getLocalDateString(date) {
@@ -64,12 +74,16 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
       setTopPriorities(priorities.length > 0 ? priorities : [''])
       setReflection(plan.reflection || '')
       setTimeBlocks(plan.time_blocks || [])
+      setShutdownComplete(plan.shutdown_complete || null)
+      setShutdownChecks(plan.shutdown_checks || {})
       setIsEditing(false) // View mode for saved plans
     } else {
       setCurrentPlan(null)
       setTopPriorities(['']) // Start with 1 priority slot
       setReflection('')
       setTimeBlocks([])
+      setShutdownComplete(null)
+      setShutdownChecks({})
       setIsEditing(true) // Edit mode for new plans
     }
   }
@@ -91,6 +105,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
           top_priorities: filteredPriorities,
           reflection: reflection || null,
           time_blocks: timeBlocks,
+          shutdown_complete: shutdownComplete,
+          shutdown_checks: shutdownChecks,
         }, { onConflict: 'user_id,date' })
 
       if (error) throw error
@@ -111,9 +127,49 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
       setTopPriorities(priorities.length > 0 ? priorities : [''])
       setReflection(currentPlan.reflection || '')
       setTimeBlocks(currentPlan.time_blocks || [])
+      setShutdownComplete(currentPlan.shutdown_complete || null)
+      setShutdownChecks(currentPlan.shutdown_checks || {})
     }
     setIsEditing(false)
   }
+
+  const toggleShutdownCheck = (checkId) => {
+    setShutdownChecks(prev => ({
+      ...prev,
+      [checkId]: !prev[checkId]
+    }))
+  }
+
+  const handleShutdownComplete = async () => {
+    const now = new Date().toISOString()
+    setShutdownComplete(now)
+
+    // Auto-save the shutdown completion
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const dateStr = getLocalDateString(currentDate)
+
+      const filteredPriorities = topPriorities.filter(p => p.trim() !== '')
+
+      await supabase
+        .from('daily_plans')
+        .upsert({
+          user_id: user.id,
+          date: dateStr,
+          top_priorities: filteredPriorities,
+          reflection: reflection || null,
+          time_blocks: timeBlocks,
+          shutdown_complete: now,
+          shutdown_checks: shutdownChecks,
+        }, { onConflict: 'user_id,date' })
+
+      await onUpdate()
+    } catch (error) {
+      console.error('Error saving shutdown:', error)
+    }
+  }
+
+  const allChecksComplete = shutdownChecklist.every(item => shutdownChecks[item.id])
 
   const addPriority = () => {
     if (topPriorities.length < 3) {
@@ -334,6 +390,77 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
           </>
         )}
       </div>
+
+      {/* Shutdown Ritual - Only show for today or past dates with a plan */}
+      {(isToday(currentDate) || (currentPlan && currentDate < new Date())) && (
+        <div className="card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+              <span className="text-xl">🌅</span>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Shutdown Ritual</h3>
+              <p className="text-sm text-gray-500">End your workday with intention</p>
+            </div>
+          </div>
+
+          {shutdownComplete ? (
+            <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+              <div className="flex items-center gap-2 text-green-700 font-medium mb-1">
+                <span>✓</span>
+                <span>Shutdown Complete</span>
+              </div>
+              <p className="text-sm text-green-600">
+                Completed at {new Date(shutdownComplete).toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                })}
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600 mb-4">
+                Cal Newport's shutdown ritual helps you mentally close out the workday
+                so you can fully rest and recharge.
+              </p>
+
+              <div className="space-y-3 mb-4">
+                {shutdownChecklist.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => toggleShutdownCheck(item.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left ${
+                      shutdownChecks[item.id]
+                        ? 'border-amber-400 bg-amber-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      shutdownChecks[item.id]
+                        ? 'border-amber-500 bg-amber-500 text-white'
+                        : 'border-gray-300'
+                    }`}>
+                      {shutdownChecks[item.id] && <span className="text-xs">✓</span>}
+                    </div>
+                    <span className={`text-sm ${shutdownChecks[item.id] ? 'text-gray-700' : 'text-gray-600'}`}>
+                      {item.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={handleShutdownComplete}
+                disabled={!allChecksComplete}
+                className="w-full py-4 bg-amber-500 text-white rounded-xl font-medium text-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {allChecksComplete ? '"Shutdown Complete"' : 'Complete all steps first'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* All Daily Plans */}
       {dailyPlans.length > 0 && (

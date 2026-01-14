@@ -4,6 +4,13 @@ import HabitCard from './HabitCard'
 import AddHabitModal from './AddHabitModal'
 import HabitCalendar from './HabitCalendar'
 
+// Newport's three keystone habit categories
+const habitCategories = [
+  { value: 'body', label: 'Body', color: '#10B981' },
+  { value: 'mind', label: 'Mind', color: '#3B82F6' },
+  { value: 'heart', label: 'Heart', color: '#EC4899' },
+]
+
 export default function DisciplineLayer() {
   const [habits, setHabits] = useState([])
   const [loading, setLoading] = useState(true)
@@ -179,37 +186,53 @@ export default function DisciplineLayer() {
         </div>
       </div>
 
-      {/* Today's Habits Section */}
+      {/* Today's Habits Section - Organized by Body/Mind/Heart */}
       {habits.length > 0 && (
         <div className="mb-8">
           <div className="card p-6">
-            <h2 className="text-2xl font-display font-bold text-ink mb-4">Today's Habits</h2>
-            <div className="space-y-3">
-              {habits.map((habit) => {
-                const isCompletedToday = habit.completions?.some(c =>
+            <h2 className="text-2xl font-display font-bold text-ink mb-4">Today's Keystone Habits</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {habitCategories.map((category) => {
+                const categoryHabit = habits.find(h => h.category === category.value)
+                const isCompletedToday = categoryHabit?.completions?.some(c =>
                   c.date === today && c.completed
                 )
+
                 return (
-                  <div key={habit.id} className="flex items-center gap-4 p-4 bg-cream-100 rounded-md">
-                    <button
-                      onClick={() => handleToggleCompletion(habit.id)}
-                      className="w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110 flex-shrink-0 text-sm font-bold"
-                      style={{
-                        borderColor: isCompletedToday ? habit.color : '#E3D9C8',
-                        backgroundColor: isCompletedToday ? habit.color : 'transparent',
-                        color: isCompletedToday ? 'white' : 'transparent',
-                      }}
-                    >
-                      {isCompletedToday && '✓'}
-                    </button>
-                    <div className="flex-1">
-                      <h3 className="font-bold text-ink">{habit.name}</h3>
-                      {habit.description && (
-                        <p className="text-sm text-ink-light">{habit.description}</p>
-                      )}
+                  <div
+                    key={category.value}
+                    className="p-4 rounded-xl border-2"
+                    style={{ borderColor: category.color + '40', backgroundColor: category.color + '08' }}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                        style={{ backgroundColor: category.color }}
+                      >
+                        {category.label[0]}
+                      </div>
+                      <span className="font-medium text-gray-700">{category.label}</span>
                     </div>
-                    {isCompletedToday && (
-                      <span className="text-sm text-green-600 font-medium">Completed</span>
+
+                    {categoryHabit ? (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleToggleCompletion(categoryHabit.id)}
+                          className="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110 flex-shrink-0 text-xs font-bold"
+                          style={{
+                            borderColor: isCompletedToday ? category.color : '#D1D5DB',
+                            backgroundColor: isCompletedToday ? category.color : 'transparent',
+                            color: isCompletedToday ? 'white' : 'transparent',
+                          }}
+                        >
+                          {isCompletedToday && '✓'}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 truncate">{categoryHabit.name}</h3>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 italic">No habit set</p>
                     )}
                   </div>
                 )
@@ -235,9 +258,10 @@ export default function DisciplineLayer() {
       {/* Habits Overview Grid */}
       {habits.length === 0 ? (
         <div className="card p-12 text-center">
-          <h2 className="text-2xl font-display font-bold text-ink mb-2">No Habits Yet</h2>
+          <h2 className="text-2xl font-display font-bold text-ink mb-2">No Keystone Habits Yet</h2>
           <p className="text-ink-light mb-6">
-            Create up to 3 keystone habits that will form the foundation of your discipline.
+            Cal Newport recommends one keystone habit in each area: Body, Mind, and Heart.
+            These form the foundation of your disciplined life.
           </p>
           <button
             onClick={() => setShowAddModal(true)}
@@ -280,6 +304,7 @@ export default function DisciplineLayer() {
           onAdd={handleAddHabit}
           editHabit={editingHabit}
           onEdit={handleEditHabit}
+          existingCategories={habits.map(h => h.category).filter(Boolean)}
         />
       )}
     </div>

@@ -39,6 +39,7 @@ CREATE TABLE habits (
   description TEXT,
   icon TEXT NOT NULL DEFAULT '⭐',
   color TEXT NOT NULL DEFAULT '#06B6D4',
+  category TEXT CHECK (category IN ('body', 'mind', 'heart')),
   "order" INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   archived BOOLEAN DEFAULT FALSE
@@ -156,7 +157,27 @@ CREATE POLICY "Users can manage own personal code"
   USING (auth.uid() = user_id);
 
 -- ============================================================================
--- WEEKLY_PLANS TABLE (for future Control Layer)
+-- QUARTERLY_PLANS TABLE (Control Layer - Multi-Scale Planning)
+-- Quarterly objectives that inform weekly planning
+-- ============================================================================
+CREATE TABLE quarterly_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  quarter_start DATE NOT NULL, -- First day of quarter (e.g., 2026-01-01, 2026-04-01)
+  objectives TEXT[], -- Array of 3-5 quarterly objectives
+  reflection TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  UNIQUE(user_id, quarter_start)
+);
+
+ALTER TABLE quarterly_plans ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own quarterly plans"
+  ON quarterly_plans FOR ALL
+  USING (auth.uid() = user_id);
+
+-- ============================================================================
+-- WEEKLY_PLANS TABLE (Control Layer - Multi-Scale Planning)
 -- Weekly planning with theme and big rocks
 -- ============================================================================
 CREATE TABLE weekly_plans (
@@ -186,6 +207,8 @@ CREATE TABLE daily_plans (
   top_priorities TEXT[], -- Top 3 priorities
   time_blocks JSONB, -- Array of {start, end, title, category}
   reflection TEXT,
+  shutdown_complete TIMESTAMP WITH TIME ZONE, -- When shutdown ritual was completed
+  shutdown_checks JSONB, -- Object tracking which checklist items were checked
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   UNIQUE(user_id, date)
 );
@@ -248,6 +271,7 @@ CREATE INDEX idx_completions_habit_id ON completions(habit_id);
 CREATE INDEX idx_completions_date ON completions(date);
 CREATE INDEX idx_values_user_id ON values(user_id);
 CREATE INDEX idx_rituals_user_id ON rituals(user_id);
+CREATE INDEX idx_quarterly_plans_user_id ON quarterly_plans(user_id);
 CREATE INDEX idx_weekly_plans_user_id ON weekly_plans(user_id);
 CREATE INDEX idx_daily_plans_user_id ON daily_plans(user_id);
 CREATE INDEX idx_remarkable_aspects_user_id ON remarkable_aspects(user_id);
