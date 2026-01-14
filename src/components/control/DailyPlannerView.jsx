@@ -26,6 +26,15 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
     return new Date(year, month - 1, day) // month is 0-indexed in JS Date
   }
 
+  // Convert 24-hour time to 12-hour format with AM/PM
+  function formatTime12Hour(time24) {
+    if (!time24) return ''
+    const [hours, minutes] = time24.split(':').map(Number)
+    const period = hours >= 12 ? 'PM' : 'AM'
+    const hours12 = hours % 12 || 12
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`
+  }
+
   function formatDate(date) {
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -197,8 +206,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
                 <div className="space-y-2">
                   {currentPlan.time_blocks.map((block, index) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <span className="text-sm font-medium text-gray-600">
-                        {block.start} - {block.end}
+                      <span className="text-sm font-medium text-gray-600 min-w-[140px]">
+                        {formatTime12Hour(block.start)} - {formatTime12Hour(block.end)}
                       </span>
                       <span className="text-gray-900">{block.title}</span>
                       {block.category && (
