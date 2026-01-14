@@ -2,7 +2,37 @@
 
 ## Project Overview
 
-This is a React web app for Cal Newport's "Deep Life Stack" - a 120-day personal development journey across 4 layers: Discipline, Values, Control, and Vision. Users track habits, set values/rituals, plan their weeks/days, and define life goals.
+This is a React web app implementing Cal Newport's "Deep Life Stack" methodology - a personal development system across 4 layers: Discipline, Values, Control, and Vision. The app is designed to align closely with Newport's teachings from his podcast and books.
+
+## Cal Newport's Deep Life Stack Methodology
+
+### The Four Layers
+1. **Discipline Layer** - Foundation of daily habits in three areas:
+   - **Body**: Physical health (exercise, sleep, nutrition)
+   - **Mind**: Mental acuity (reading, learning, meditation)
+   - **Heart**: Emotional connection (relationships, community)
+
+2. **Values Layer** - Defining what matters:
+   - Core personal values
+   - Rituals aligned with each value
+   - Personal code document
+
+3. **Control Layer** - Multi-scale planning (Newport's signature system):
+   - **Quarterly Planning**: 3-5 major objectives per quarter
+   - **Weekly Planning**: Theme + big rocks that advance quarterly goals
+   - **Daily Planning**: Top priorities + time blocking
+   - **Shutdown Ritual**: End-of-day checklist to mentally close work
+
+4. **Vision Layer** - Long-term life design:
+   - Remarkable aspects of life to develop
+   - Milestones for tracking progress
+
+### Key Principle: Connected Planning Scales
+Each planning scale should reference the level above:
+- Weekly planner shows quarterly objectives for context
+- Daily planner shows weekly big rocks for context
+
+This ensures daily actions align with bigger goals.
 
 ## Tech Stack
 
@@ -13,7 +43,7 @@ This is a React web app for Cal Newport's "Deep Life Stack" - a 120-day personal
 ## Key Architecture Patterns
 
 ### View/Edit Mode (Control Layer)
-`DailyPlannerView.jsx` and `WeeklyPlannerView.jsx` use a view/edit toggle:
+`DailyPlannerView.jsx`, `WeeklyPlannerView.jsx`, and `QuarterlyPlannerView.jsx` use a view/edit toggle:
 - `isEditing` state controls which UI is shown
 - Saved plans load in view mode (read-only styled text)
 - New plans start in edit mode
@@ -86,9 +116,9 @@ Parent components (e.g., `ControlLayer`) fetch data and pass to children via pro
 src/components/
 ├── auth/          # Login, signup
 ├── dashboard/     # Main dashboard, activity grid, today's focus
-├── discipline/    # Habit tracking (DisciplineLayer, HabitCard, HabitCalendar)
+├── discipline/    # Habit tracking (DisciplineLayer, HabitCard, HabitCalendar, AddHabitModal)
 ├── values/        # Personal code, core values, rituals
-├── control/       # Weekly/daily planning, time blocks, household
+├── control/       # Quarterly/weekly/daily planning, time blocks
 ├── vision/        # Remarkable aspects, milestones
 ├── landing/       # Marketing landing page
 └── shared/        # Sidebar navigation
@@ -98,9 +128,12 @@ src/components/
 
 | File | Purpose |
 |------|---------|
-| `src/components/control/DailyPlannerView.jsx` | Daily planning with priorities, time blocks, reflection |
-| `src/components/control/WeeklyPlannerView.jsx` | Weekly theme and big rocks |
-| `src/components/control/TimeBlockingView.jsx` | Time block add/remove component |
+| `src/components/control/QuarterlyPlannerView.jsx` | Quarterly objectives and reflection |
+| `src/components/control/WeeklyPlannerView.jsx` | Weekly theme and big rocks (shows quarterly context) |
+| `src/components/control/DailyPlannerView.jsx` | Daily priorities, time blocks, reflection, shutdown ritual (shows weekly context) |
+| `src/components/control/TimeBlockingView.jsx` | Time block add/edit/remove component |
+| `src/components/discipline/DisciplineLayer.jsx` | Habits organized by Body/Mind/Heart categories |
+| `src/components/discipline/AddHabitModal.jsx` | Create/edit habits with Body/Mind/Heart category selection |
 | `src/components/dashboard/Dashboard.jsx` | Main dashboard with activity grid |
 | `src/lib/supabase.js` | Supabase client initialization |
 | `src/lib/calculations.js` | Streak and completion rate calculations |
@@ -109,11 +142,18 @@ src/components/
 
 ## Database Tables
 
-- `journeys` - User's 120-day journey (unique per user)
-- `habits` / `completions` - Discipline layer
-- `personal_code` / `values` / `rituals` / `ritual_completions` - Values layer
-- `weekly_plans` / `daily_plans` - Control layer
-- `remarkable_aspects` / `milestones` - Vision layer
+- `journeys` - User's journey tracking (unique per user)
+- `habits` - Keystone habits with `category` field (body/mind/heart)
+- `completions` - Daily habit completion records
+- `personal_code` - User's personal code document (Values layer)
+- `values` - Core personal values
+- `rituals` - Value-aligned rituals (linked to values via `value_id`)
+- `ritual_completions` - Ritual completion tracking
+- `quarterly_plans` - Quarterly objectives and reflection
+- `weekly_plans` - Weekly theme and big rocks
+- `daily_plans` - Daily priorities, time blocks, reflection, shutdown ritual data
+- `remarkable_aspects` - Vision layer life aspects
+- `milestones` - Milestones for remarkable aspects
 
 All tables have Row Level Security - users can only access their own data.
 
@@ -124,6 +164,7 @@ All tables have Row Level Security - users can only access their own data.
 - Layer-specific colors: `control-primary`, `values-primary`, `discipline-primary`, `vision-primary`
 - Gradient buttons: `gradient-control`, `gradient-values`, etc.
 - Card styling: `className="card p-6"` for consistent cards
+- Context boxes use colored backgrounds: purple for quarterly, blue for weekly
 
 ## Testing Changes
 
@@ -133,24 +174,22 @@ All tables have Row Level Security - users can only access their own data.
 
 ## Current State (January 2026)
 
-All 4 layers are fully implemented:
-- **Discipline**: Habit tracking with streaks and calendar
-- **Values**: Personal code (auto-save), core values, rituals with completion tracking
-- **Control**: Weekly/daily planning with view/edit modes, time blocking
+All 4 layers are fully implemented and aligned with Cal Newport's methodology:
+
+- **Discipline**: Habits organized by Body/Mind/Heart categories (max 1 per category)
+- **Values**: Personal code (auto-save), core values, rituals linked to values
+- **Control**: Multi-scale planning (Quarterly → Weekly → Daily) with connected context, shutdown ritual
 - **Vision**: Remarkable aspects with milestones and progress tracking
 
 Recent work:
-- Control Layer UX improvements (view/edit modes, cleaner UI)
-- Fixed timezone bugs across all date handling (see "Timezone-Safe Date Handling" above)
-- Added `vercel.json` for SPA routing (fixes 404 on page refresh)
-- Dashboard performance optimization with parallel queries
-
-## Areas That May Need Work
-
-- Household Systems tab uses localStorage only (not synced to database)
-- Automations tab is a placeholder
-- Time blocking UI is minimal
-- No mobile-specific optimizations yet
+- Aligned app with Cal Newport's actual Deep Life Stack methodology
+- Restructured habits into Body/Mind/Heart categories
+- Added Quarterly Planning as top of multi-scale planning system
+- Connected planning scales (weekly shows quarterly context, daily shows weekly context)
+- Added Shutdown Ritual checklist to daily planning
+- Removed non-Newport features (Household Systems, Automations tabs)
+- Added habit delete functionality
+- Fixed timezone bugs across all date handling
 
 ## Common Tasks
 
@@ -163,3 +202,10 @@ Recent work:
 
 **Fixing upsert errors:**
 Check that `onConflict` matches the unique constraint columns in `supabase-schema.sql`
+
+**Adding database columns (for existing tables):**
+```sql
+ALTER TABLE table_name ADD COLUMN IF NOT EXISTS column_name DATA_TYPE;
+```
+
+Note: PostgreSQL doesn't support `IF NOT EXISTS` for `CREATE POLICY`, so run policy creation separately and expect errors if already exists.
