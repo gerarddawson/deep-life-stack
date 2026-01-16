@@ -207,6 +207,8 @@ CREATE TABLE daily_plans (
   top_priorities TEXT[], -- Top 3 priorities
   time_blocks JSONB, -- Array of {start, end, title, category}
   reflection TEXT,
+  tasks_notes TEXT, -- Freeform notes for future tasks
+  ideas_notes TEXT, -- Freeform notes for ideas to explore
   shutdown_complete TIMESTAMP WITH TIME ZONE, -- When shutdown ritual was completed
   shutdown_checks JSONB, -- Object tracking which checklist items were checked
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,

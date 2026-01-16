@@ -190,6 +190,11 @@ Recent work:
 - Removed non-Newport features (Household Systems, Automations tabs)
 - Added habit delete functionality
 - Fixed timezone bugs across all date handling
+- Added Tasks and Ideas note-taking sections to Daily Planner
+
+## Planned Improvements
+
+**Tasks & Ideas UX Enhancement**: Currently, Tasks and Ideas are tied to the daily plan's edit/view mode. Improve this so users can keep their daily plan saved (view mode) while still having Tasks/Ideas accessible as a running notes doc that auto-saves as they type (similar to how Personal Code works in the Values layer).
 
 ## Common Tasks
 

@@ -14,6 +14,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [topPriorities, setTopPriorities] = useState([''])
   const [reflection, setReflection] = useState('')
+  const [tasksNotes, setTasksNotes] = useState('')
+  const [ideasNotes, setIdeasNotes] = useState('')
   const [timeBlocks, setTimeBlocks] = useState([])
   const [saving, setSaving] = useState(false)
   const [currentPlan, setCurrentPlan] = useState(null)
@@ -115,6 +117,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
       const priorities = plan.top_priorities || []
       setTopPriorities(priorities.length > 0 ? priorities : [''])
       setReflection(plan.reflection || '')
+      setTasksNotes(plan.tasks_notes || '')
+      setIdeasNotes(plan.ideas_notes || '')
       setTimeBlocks(plan.time_blocks || [])
       setShutdownComplete(plan.shutdown_complete || null)
       setShutdownChecks(plan.shutdown_checks || {})
@@ -123,6 +127,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
       setCurrentPlan(null)
       setTopPriorities(['']) // Start with 1 priority slot
       setReflection('')
+      setTasksNotes('')
+      setIdeasNotes('')
       setTimeBlocks([])
       setShutdownComplete(null)
       setShutdownChecks({})
@@ -146,6 +152,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
           date: dateStr,
           top_priorities: filteredPriorities,
           reflection: reflection || null,
+          tasks_notes: tasksNotes || null,
+          ideas_notes: ideasNotes || null,
           time_blocks: timeBlocks,
           shutdown_complete: shutdownComplete,
           shutdown_checks: shutdownChecks,
@@ -168,6 +176,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
       const priorities = currentPlan.top_priorities || []
       setTopPriorities(priorities.length > 0 ? priorities : [''])
       setReflection(currentPlan.reflection || '')
+      setTasksNotes(currentPlan.tasks_notes || '')
+      setIdeasNotes(currentPlan.ideas_notes || '')
       setTimeBlocks(currentPlan.time_blocks || [])
       setShutdownComplete(currentPlan.shutdown_complete || null)
       setShutdownChecks(currentPlan.shutdown_checks || {})
@@ -200,6 +210,8 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
           date: dateStr,
           top_priorities: filteredPriorities,
           reflection: reflection || null,
+          tasks_notes: tasksNotes || null,
+          ideas_notes: ideasNotes || null,
           time_blocks: timeBlocks,
           shutdown_complete: now,
           shutdown_checks: shutdownChecks,
@@ -340,6 +352,36 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
               </div>
             </div>
 
+            {/* Tasks and Ideas - View Mode */}
+            {(currentPlan.tasks_notes || currentPlan.ideas_notes) && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tasks
+                  </label>
+                  {currentPlan.tasks_notes ? (
+                    <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-4 rounded-xl text-sm">
+                      {currentPlan.tasks_notes}
+                    </p>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">No tasks noted</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ideas
+                  </label>
+                  {currentPlan.ideas_notes ? (
+                    <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-4 rounded-xl text-sm">
+                      {currentPlan.ideas_notes}
+                    </p>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">No ideas noted</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Time Blocks - View Mode */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -428,6 +470,34 @@ export default function DailyPlannerView({ dailyPlans, onUpdate }) {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Tasks and Ideas - Edit Mode */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tasks
+                </label>
+                <textarea
+                  value={tasksNotes}
+                  onChange={(e) => setTasksNotes(e.target.value)}
+                  placeholder="Jot down tasks for later..."
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition resize-none text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ideas
+                </label>
+                <textarea
+                  value={ideasNotes}
+                  onChange={(e) => setIdeasNotes(e.target.value)}
+                  placeholder="Capture ideas to explore..."
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-control-primary focus:border-transparent outline-none transition resize-none text-gray-900"
+                />
               </div>
             </div>
 
